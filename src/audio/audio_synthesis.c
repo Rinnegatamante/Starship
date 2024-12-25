@@ -1014,13 +1014,12 @@ Acmd* AudioSynth_ProcessNote(s32 noteIndex, NoteSubEu* noteSub, NoteSynthesisSta
 
                     case CODEC_S16:
                         skipBytes = 0;
+                        size_t bytesToRead;
                         numSamplesProcessed += numSamplesToLoadAdj;
                         dmemUncompressedAddrOffset1 = numSamplesToLoadAdj;
-                        size_t bytesToRead;
 
-                        if (((synthState->samplePosInt * 2) + (numSamplesToLoadAdj + SAMPLES_PER_FRAME) * SAMPLE_SIZE) <
-                            bookSample->size) {
-                            bytesToRead = (numSamplesToLoadAdj + SAMPLES_PER_FRAME) * SAMPLE_SIZE;
+                        if (((synthState->samplePosInt * 2) + (numSamplesToLoadAdj)*SAMPLE_SIZE) < bookSample->size) {
+                            bytesToRead = (numSamplesToLoadAdj)*SAMPLE_SIZE;
                         } else {
                             bytesToRead = bookSample->size - (synthState->samplePosInt * 2);
                         }
@@ -1036,8 +1035,15 @@ Acmd* AudioSynth_ProcessNote(s32 noteIndex, NoteSubEu* noteSub, NoteSynthesisSta
                 }
 
                 aligned = ALIGN16((nFramesToDecode * frameSize) + 0x10);
-                addr = 0x990 - aligned;
+                addr = DMEM_COMPRESSED_ADPCM_DATA - aligned;
 
+#if __SANITIZE_ADDRESS__
+                uintptr_t actualAddrLoaded = samplesToLoadAddr - sampleDataChunkAlignPad;
+                uintptr_t offset = actualAddrLoaded - (uintptr_t)sampleAddr;
+                if (offset + aligned > bookSample->size) {
+                    aligned -= (offset + aligned - bookSample->size);
+                }
+#endif
                 if (nFramesToDecode != 0) {
                     frameIndex = (synthState->samplePosInt + skipInitialSamples - nFirstFrameSamplesToIgnore) / 16;
                     sampleDataOffset = frameIndex * frameSize;
