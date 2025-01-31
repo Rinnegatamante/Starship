@@ -57,8 +57,8 @@ float gInterpolationStep = 0.0f;
 void AudioThread_CreateNextAudioBuffer(int16_t* samples, uint32_t num_samples);
 }
 
+std::vector<uint8_t*> MemoryPool;
 GameEngine* GameEngine::Instance;
-static GamePool MemoryPool = { .chunk = 1024 * 512, .cursor = 0, .length = 0, .memory = nullptr };
 
 GameEngine::GameEngine() {
     std::vector<std::string> OTRFiles;
@@ -180,7 +180,10 @@ void GameEngine::Create() {
 
 void GameEngine::Destroy() {
     AudioExit();
-    free(MemoryPool.memory);
+    for (auto ptr : MemoryPool) {
+        free(ptr);
+    }
+    MemoryPool.clear();
 }
 
 bool ShouldClearTextureCacheAtEndOfFrame = false;
@@ -565,27 +568,16 @@ extern "C" int32_t OTRConvertHUDXToScreenX(int32_t v) {
 }
 
 extern "C" void* GameEngine_Malloc(size_t size) {
-    // This is really wrong
-    return malloc(size);
-    // TODO: Kenix please take a look at this, i think it works but you are better at this
+    MemoryPool.push_back(new uint8_t[size]);
+    return (void*) MemoryPool.back();
+}
 
-    const auto chunk = MemoryPool.chunk;
-
-    if (size == 0) {
-        return nullptr;
+extern "C" void GameEngine_Free(void* ptr) {
+    for (auto it = MemoryPool.begin(); it != MemoryPool.end(); ++it) {
+        if (*it == ptr) {
+            free(ptr);
+            MemoryPool.erase(it);
+            break;
+        }
     }
-
-    if (MemoryPool.cursor + size < MemoryPool.length) {
-        const auto res = static_cast<uint8_t*>(MemoryPool.memory) + MemoryPool.cursor;
-        MemoryPool.cursor += size;
-        // SPDLOG_INFO("Allocating {} into memory pool", size);
-        return res;
-    }
-
-    MemoryPool.length += chunk;
-    MemoryPool.memory =
-        MemoryPool.memory == nullptr ? malloc(MemoryPool.length) : realloc(MemoryPool.memory, MemoryPool.length);
-    memset(static_cast<uint8_t*>(MemoryPool.memory) + MemoryPool.length, 0, MemoryPool.length - chunk);
-    SPDLOG_INFO("Memory pool resized from {} to {}", MemoryPool.length - chunk, MemoryPool.length);
-    return GameEngine_Malloc(size);
 }
