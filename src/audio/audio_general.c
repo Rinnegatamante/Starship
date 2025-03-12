@@ -2240,7 +2240,7 @@ void Audio_AnalyzeFrequencies(f32* buffer0, f32* buffer1, s32 length, f32* buffe
     s32 size;
 
     size = 1 << length;
-    half = size >> 1;
+    half = size / 2;
 
     // Initialize buffer 2 if it is the wrong size for this calculation
     if (size != (s32) buffer2[0]) {
@@ -2324,9 +2324,15 @@ u8* Audio_UpdateFrequencyAnalysis(void) {
 
     Audio_ProcessPlaylist();
     // clang-format off
-    aiData = gAiBuffers[gCurAiBuffIndex];\
-    for(i3 = 0; i3 < 256; i3++) {\
-        sAudioAnalyzerData[i3] = *aiData++;
+    aiData = gAiBuffers[gCurAiBuffIndex];
+    int numChannels = GetNumAudioChannels();
+    for(i3 = 0; i3 < 256; i3++) {
+        sAudioAnalyzerData[i3] = *aiData;
+        if (i3 % 2 == 0) {
+            aiData++;
+        } else {
+            aiData += numChannels - 1;
+        }
     }
     // clang-format on
     Audio_AnalyzeFrequencies(sAudioAnalyzerData, sAnalyzerBuffer1, 8, sAnalyzerBuffer2);
