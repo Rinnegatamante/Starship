@@ -461,12 +461,9 @@ public:
     void detach_task(F&& task BS_THREAD_POOL_PRIORITY_INPUT)
     {
         {
-			printf("detach_task called\n");
             const std::scoped_lock tasks_lock(tasks_mutex);
-			printf("task_emplace\n");
             tasks.emplace(std::forward<F>(task) BS_THREAD_POOL_PRIORITY_OUTPUT);
         }
-		printf("notify one\n");
         task_available_cv.notify_one();
     }
 
@@ -609,7 +606,6 @@ public:
     template <typename F, typename R = std::invoke_result_t<std::decay_t<F>>>
     [[nodiscard]] std::future<R> submit_task(F&& task BS_THREAD_POOL_PRIORITY_INPUT)
     {
-		printf("submit_task called\n");
         const std::shared_ptr<std::promise<R>> task_promise = std::make_shared<std::promise<R>>();
         detach_task(
             [task = std::forward<F>(task), task_promise]
@@ -618,7 +614,6 @@ public:
                 try
                 {
 #endif
-					printf("task\n");
                     if constexpr (std::is_void_v<R>)
                     {
                         task();

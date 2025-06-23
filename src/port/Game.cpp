@@ -3,6 +3,11 @@
 #include <Fast3D/interpreter.h>
 #include "Engine.h"
 
+#ifdef __vita__
+#include <vitasdk.h>
+int _newlib_heap_size_user = 256 * 1024 * 1024;
+#endif
+
 extern "C" {
 #include <sf64mesg.h>
     void Main_SetVIMode(void);
@@ -36,6 +41,12 @@ int SDL_main(int argc, char **argv) {
 extern "C"
 #endif
 int main(int argc, char *argv[]) {
+#endif
+#ifdef __vita__
+    scePowerSetArmClockFrequency(444);
+    scePowerSetBusClockFrequency(222);
+    scePowerSetGpuClockFrequency(222);
+    scePowerSetGpuXbarClockFrequency(166);
 #endif
     GameEngine::Create();
     Main_SetVIMode();
