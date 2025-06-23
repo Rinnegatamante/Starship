@@ -10,7 +10,7 @@
  * @brief BS::thread_pool: a fast, lightweight, and easy-to-use C++17 thread pool library. This header file contains the main thread pool class and some additional classes and definitions. No other files are needed in order to use the thread pool itself.
  */
 
-#if !defined(__cpp_exceptions) && !defined(__vita__)
+#ifndef __cpp_exceptions
     #define BS_THREAD_POOL_DISABLE_EXCEPTION_HANDLING
     #undef BS_THREAD_POOL_ENABLE_WAIT_DEADLOCK_CHECK
 #endif
@@ -433,9 +433,7 @@ public:
      */
     void pause()
     {
-#ifndef __vita__
         const std::scoped_lock tasks_lock(tasks_mutex);
-#endif
         paused = true;
     }
 #endif
@@ -740,15 +738,11 @@ public:
      */
     void unpause()
     {
-#ifdef __vita__
-		paused = false;
-#else
         {
             const std::scoped_lock tasks_lock(tasks_mutex);
             paused = false;
         }
         task_available_cv.notify_all();
-#endif
     }
 #endif
 
