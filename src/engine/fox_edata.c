@@ -1,6 +1,10 @@
 #include "global.h"
 
+#ifdef __vita__
+#include "fox_edata_info.c.exclude"
+#else
 #include "fox_edata_info.c"
+#endif
 
 f32* D_edata_800CF964[] = { NULL }; // Likely a scrapped array of scenery shadow boxes
 

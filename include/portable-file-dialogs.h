@@ -194,7 +194,7 @@ class executor {
     std::condition_variable m_cond;
     std::mutex m_mutex;
     DWORD m_tid;
-#elif __EMSCRIPTEN__ || __NX__
+#elif __EMSCRIPTEN__ || __NX__ || __vita__
     // FIXME: do something
 #else
     pid_t m_pid = 0;
@@ -644,7 +644,7 @@ inline bool internal::executor::kill() {
                 SendMessage(hwnd, WM_COMMAND, IDNO, 0);
             }
     }
-#elif __EMSCRIPTEN__ || __NX__
+#elif __EMSCRIPTEN__ || __NX__ || __vita__
     // FIXME: do something
     return false; // cannot kill
 #else
@@ -691,6 +691,7 @@ inline void internal::executor::start(int exit_code) {
 
 #else
 inline void internal::executor::start_process(std::vector<std::string> const& command) {
+#ifndef __vita__
     stop();
     m_stdout.clear();
     m_exit_code = -1;
@@ -730,6 +731,7 @@ inline void internal::executor::start_process(std::vector<std::string> const& co
     fcntl(m_fd, F_SETFL, flags | O_NONBLOCK);
 
     m_running = true;
+#endif
 }
 #endif
 
@@ -758,7 +760,7 @@ inline bool internal::executor::ready(int timeout /* = default_wait_timeout */) 
 
         m_stdout = m_future.get();
     }
-#elif __EMSCRIPTEN__ || __NX__
+#elif __EMSCRIPTEN__ || __NX__ || __vita__
     // FIXME: do something
     (void)timeout;
 #else
@@ -1099,7 +1101,7 @@ inline internal::file_dialog::file_dialog(type in_type, std::string const& title
 
         return "";
     });
-#elif __EMSCRIPTEN__
+#elif defined(__EMSCRIPTEN__) || (__vita__)
     // FIXME: do something
     (void)in_type;
     (void)title;
@@ -1423,7 +1425,7 @@ inline notify::notify(std::string const& title, std::string const& message, icon
 
     // Display the new icon
     Shell_NotifyIconW(NIM_ADD, nid.get());
-#elif __EMSCRIPTEN__
+#elif defined(__EMSCRIPTEN__) || defined(__vita__)
     // FIXME: do something
     (void)title;
     (void)message;
@@ -1460,7 +1462,8 @@ inline notify::notify(std::string const& title, std::string const& message, icon
 
 inline message::message(std::string const& title, std::string const& text, choice _choice /* = choice::ok_cancel */,
                         icon _icon /* = icon::info */) {
-#if _WIN32
+#ifdef __vita__
+#elif _WIN32
     // Use MB_SYSTEMMODAL rather than MB_TOPMOST to ensure the message window is brought
     // to front. See https://github.com/samhocevar/portable-file-dialogs/issues/52
     UINT style = MB_SYSTEMMODAL;

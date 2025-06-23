@@ -3,7 +3,11 @@
 
 u8 sFillTimer = 3;
 
+#ifdef __vita__
+#include "fox_load_inits.c.exclude"
+#else
 #include "fox_load_inits.c"
+#endif
 
 Scene sCurrentScene = {
     NO_OVERLAY,

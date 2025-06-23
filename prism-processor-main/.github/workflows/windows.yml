@@ -1,0 +1,29 @@
+name: Windows Compile
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          cmake -S . -B "build/x64" -G "Visual Studio 17 2022" -T v142 -A x64 -DCMAKE_BUILD_TYPE:STRING=Release
+          cmake --build ./build/x64
+      - name: Publish packaged artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: prism-windows-x64
+          path: build/x64/Debug/prism.exe
+      - name: Test
+        continue-on-error: true
+        run: |
+          cd build/x64
+          ctest -j -C Debug
+      - name: Echo Test Results
+        run: cat build-cmake/Testing/Temporary/LastTest.log

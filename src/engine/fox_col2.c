@@ -1,6 +1,10 @@
 #include "global.h"
 
+#ifdef __vita__
+#include "fox_colheaders.c.exclude"
+#else
 #include "fox_colheaders.c"
+#endif
 
 bool func_col2_800A36FC(Vec3f* objPos, Vec3f* colliderPos, CollisionHeader2* colHeader, Vec3f* hitDataOut);
 bool func_col2_800A3A74(Vec3f* point, Vec3f** tri, Vec3f* normOut);

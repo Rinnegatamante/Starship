@@ -1,5 +1,10 @@
 #include "global.h"
+
+#ifdef __vita__
+#include "fox_rcp_setup.c.exclude"
+#else
 #include "fox_rcp_setup.c"
+#endif
 
 u8 D_80178580[0x190];
 void* D_80178710;

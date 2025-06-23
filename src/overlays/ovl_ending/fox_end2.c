@@ -12,7 +12,11 @@ Vec3f D_ending_80198600[300];
 
 bool sTagged = false;
 
+#ifdef __vita__
+#include "fox_end2_data.c.exclude"
+#else
 #include "fox_end2_data.c"
+#endif
 
 void Ending_8018CE20(u32 arg0) {
     u8 alpha;
