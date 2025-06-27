@@ -602,8 +602,6 @@ u8* func_800097A8(Sample* sample, s32 length, u32 flags, UnkStruct_800097A8* arg
         sp1C = &gSampleDmas[gSampleDmaReuseQueue1[gSampleDmaReuseQueue1RdPos++]];
     }
 
-    if (1) {} //! FAKE
-
     sp1C->ttl = 2;
     // @port: (uintptr_t)
     sp1C->devAddr = (uintptr_t) sample->sampleAddr;

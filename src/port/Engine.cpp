@@ -1,3 +1,7 @@
+#ifdef __vita__
+#include "stacking_thread.h"
+#endif
+
 #include "Engine.h"
 #include "ui/ImguiUI.h"
 #include "StringHelper.h"
@@ -217,6 +221,10 @@ void GameEngine::StartFrame() const {
 
 #endif
 
+#ifdef __vita__
+#include <vitasdk.h>
+#endif
+
 #define NUM_AUDIO_CHANNELS 2
 
 extern "C" u16 audBuffer = 0;
@@ -301,7 +309,11 @@ void GameEngine::EndAudioFrame() {
 void GameEngine::AudioInit() {
     if (!audio.running) {
         audio.running = true;
+#ifdef __vita__
+        audio.thread = std::stacking_thread(2 * 1024 * 1024, HandleAudioThread);
+#else
         audio.thread = std::thread(HandleAudioThread);
+#endif
     }
 }
 
