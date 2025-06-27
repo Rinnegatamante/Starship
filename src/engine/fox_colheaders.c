@@ -1,3 +1,4 @@
+#ifndef __vita__
 #include "macros.h"
 #include "variables.h"
 #include "assets/ast_aquas.h"
@@ -242,3 +243,4 @@ CollisionHeader2 D_800D2CA0[19] = {
         D_AQ_6032430,
     },
 };
+#endif

@@ -1,3 +1,11 @@
+f/*
+*.velf
+*.elf
+*.vpk
+*.sfo
+*.bin
+*.o
+
 asm
 expected
 __pycache__

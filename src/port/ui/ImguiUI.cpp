@@ -42,6 +42,8 @@ void SetupGuiElements() {
     if (gui->GetMenuBar() && !gui->GetMenuBar()->IsVisible()) {
 #if defined(__SWITCH__) || defined(__WIIU__)
         Notification::Emit({ .message = "Press - to access enhancements menu", .remainingTime = 10.0f });
+#elif defined(__vita__)
+        Notification::Emit({ .message = "Press SELECT to access enhancements menu", .remainingTime = 10.0f });
 #else
         Notification::Emit({ .message = "Press F1 to access enhancements menu", .remainingTime = 10.0f });
 #endif

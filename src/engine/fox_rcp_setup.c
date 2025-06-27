@@ -1,3 +1,4 @@
+#ifndef __vita__
 #include "gfx.h"
 
 Gfx gRcpSetupDLs[][9] = {
@@ -1408,3 +1409,4 @@ Gfx gRcpSetupDLs[][9] = {
         gsSPEndDisplayList(),
     },
 };
+#endif

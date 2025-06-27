@@ -1,3 +1,4 @@
+#ifndef __vita__
 #include "sf64dma.h"
 
 #define NO_SEGMENT \
@@ -803,3 +804,4 @@ Scene sOvlUnused_Unk[1] = {
         /* 0xE */ NO_SEGMENT,
         /* 0xF */ NO_SEGMENT } },
 };
+#endif

@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "sf64audio_provisional.h"
 #include "endianness.h"
+#include "port/Engine.h"
 
 #define PORTAMENTO_IS_SPECIAL(x) ((x).mode & 0x80)
 #define PORTAMENTO_MODE(x) ((x).mode & ~0x80)
@@ -48,7 +49,7 @@ static const char devstr30[] = "Group:Undefined Command\n";
 
 void AudioSeq_AudioListPushBack(AudioListItem* list, AudioListItem* item);
 void* AudioSeq_AudioListPopBack(AudioListItem* list);
-u8 AudioSeq_GetInstrument(SequenceChannel* channel, u8 arg1, Instrument** instrument, AdsrSettings* adsrSettings);
+u8 AudioSeq_GetInstrument(SequenceChannel* channel, u8 instId, Instrument** instrumentOut, AdsrSettings* adsrSettings);
 
 void AudioSeq_InitSequenceChannel(SequenceChannel* channel) {
     s32 i;
@@ -144,8 +145,7 @@ void AudioSeq_SeqLayerDisable(SequenceLayer* layer) {
     }
 }
 
-void AudioSeq_SeqLayerFree(SequenceChannel* channel, s32 layerIndex) 
-{
+void AudioSeq_SeqLayerFree(SequenceChannel* channel, s32 layerIndex) {
     if (layerIndex < 4) {
         SequenceLayer* layer = channel->layers[layerIndex];
 
@@ -769,8 +769,8 @@ void AudioSeq_SetInstrument(SequenceChannel* channel, u8 instId) {
     channel->hasInstrument = true;
 }
 
-void AudioSeq_SequenceChannelSetVolume(SequenceChannel* channel, u8 arg1) {
-    channel->volume = (s32) arg1 / 127.0f;
+void AudioSeq_SequenceChannelSetVolume(SequenceChannel* channel, u8 volume) {
+    channel->volume = (s32) volume / 127.0f;
 }
 
 void AudioSeq_SequenceChannelProcessScript(SequenceChannel* channel) {
@@ -784,7 +784,7 @@ void AudioSeq_SequenceChannelProcessScript(SequenceChannel* channel) {
     s8 sp4B;
     u8* seqData;
     s32 pad;
-    
+
     if (!channel->enabled) {
         return;
     }
@@ -911,10 +911,8 @@ void AudioSeq_SequenceChannelProcessScript(SequenceChannel* channel) {
                         sp52 = ((u16*) gSeqFontTable)[seqPlayer->seqId];
                         loBits = gSeqFontTable[sp52];
                         cmd = gSeqFontTable[sp52 + loBits - cmd];
-                        //if (AudioHeap_SearchCaches(FONT_TABLE, CACHE_EITHER, cmd) != NULL) 
-						{
-                            channel->fontId = cmd;
-                        }
+                        // if (AudioHeap_SearchCaches(FONT_TABLE, CACHE_EITHER, cmd) != NULL)
+                        { channel->fontId = cmd; }
                         /* fallthrough */
                     case 0xC1:
                         cmd = AudioSeq_ScriptReadU8(state);
@@ -1019,10 +1017,8 @@ void AudioSeq_SequenceChannelProcessScript(SequenceChannel* channel) {
                         loBits = gSeqFontTable[sp52];
                         cmd = gSeqFontTable[sp52 + loBits - cmd];
 
-                        //if (AudioHeap_SearchCaches(FONT_TABLE, CACHE_EITHER, cmd) != NULL) 
-						{
-                            channel->fontId = cmd;
-                        }
+                        // if (AudioHeap_SearchCaches(FONT_TABLE, CACHE_EITHER, cmd) != NULL)
+                        { channel->fontId = cmd; }
                         break;
 
                     case 0xC7:
@@ -1531,7 +1527,7 @@ void AudioSeq_ProcessSequences(s32 arg0) {
     s32 i;
 
     for (i = 0; i < ARRAY_COUNT(gSeqPlayers); i++) {
-        if (gSeqPlayers[i].enabled == 1) {
+        if (gSeqPlayers[i].enabled == true) {
             AudioSeq_SequencePlayerProcessSequence(&gSeqPlayers[i]);
             Audio_SequencePlayerProcessSound(&gSeqPlayers[i]);
         }

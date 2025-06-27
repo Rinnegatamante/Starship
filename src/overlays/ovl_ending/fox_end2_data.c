@@ -1,3 +1,4 @@
+#ifndef __vita__
 #ifndef FOX_END2_DATA
 #define FOX_END2_DATA
 
@@ -291,4 +292,5 @@ UnkEnd54 D_ending_80195F4C[] = {
 
 // clang-format on
 
+#endif
 #endif

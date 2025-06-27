@@ -1,3 +1,4 @@
+#ifndef __vita__
 /**
  * Glossary:
  *
@@ -518,3 +519,4 @@ ObjectInfo gObjectInfo[] = {
   /* OBJ_EFFECT_399  */  {(void*) Effect_Effect399_Draw, 1, (ObjectFunc) Effect_Effect399_Update,             NULL,   100.0f,  0, 0, 40, 0,   0.0f,  0 },
 };
 // clang-format on
+#endif
