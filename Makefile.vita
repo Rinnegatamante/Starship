@@ -118,7 +118,8 @@ CVAR_PREFIX_REMOTE := gRemote
 PREFIX  = arm-vita-eabi
 CC      = $(PREFIX)-gcc
 CXX      = $(PREFIX)-g++
-CFLAGS  = -fno-lto -g -Wl,-q -O3 -ffast-math $(foreach dir,$(INCLUDES),-I$(dir)) \
+CFLAGS  = -fno-lto -g -Wl,-q -O3 -ffast-math -fno-short-enums -fsigned-char \
+		$(foreach dir,$(INCLUDES),-I$(dir)) \
 		-Wno-narrowing -DIMGUI_IMPL_OPENGL_ES2 -DSPDLOG_ACTIVE_LEVEL=6 \
 		-I$(VITASDK)/$(PREFIX)/include/SDL2 -DENABLE_OPENGL -D$(GFX_UCODE) \
 		-D_LANGUAGE_C -D_USE_MATH_DEFINED -DCIMGUI_DEFINE_ENUMS_AND_STRUCTS \
