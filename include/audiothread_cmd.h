@@ -1,10 +1,6 @@
 #ifndef AUDIOTHREAD_CMD_H
 #define AUDIOTHREAD_CMD_H
 
-#ifdef __vita__
-#define GetNumAudioChannels() (2)
-#endif
-
 void AudioThread_QueueCmdF32(u32 opArgs, f32 val);
 void AudioThread_QueueCmdS32(u32 opArgs, u32 val);
 void AudioThread_QueueCmdS8(u32 opArgs, s8 val);
