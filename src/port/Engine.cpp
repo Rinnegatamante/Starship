@@ -220,6 +220,7 @@ void GameEngine::StartFrame() const {
 
 #ifdef __vita__
 #include <vitasdk.h>
+#define AUTO_FRAMESKIP
 #endif
 
 #define NUM_AUDIO_CHANNELS 2
@@ -324,6 +325,17 @@ void GameEngine::AudioExit() {
     audio.thread.join();
 }
 
+#ifdef __vita__
+void GameEngine::RunCommands(Gfx* Commands) {
+    gfx_run(Commands);
+    gfx_end_frame();
+	
+	if (ShouldClearTextureCacheAtEndOfFrame) {
+        gfx_texture_cache_clear();
+        ShouldClearTextureCacheAtEndOfFrame = false;
+    }
+}
+#else
 void GameEngine::RunCommands(Gfx* Commands, const std::vector<std::unordered_map<Mtx*, MtxF>>& mtx_replacements) {
     for (const auto& m : mtx_replacements) {
         gfx_run(Commands, m);
@@ -335,6 +347,7 @@ void GameEngine::RunCommands(Gfx* Commands, const std::vector<std::unordered_map
         ShouldClearTextureCacheAtEndOfFrame = false;
     }
 }
+#endif
 
 void GameEngine::ProcessGfxCommands(Gfx* commands) {
     auto wnd = std::dynamic_pointer_cast<Fast::Fast3dWindow>(Ship::Context::GetInstance()->GetWindow());
@@ -345,12 +358,17 @@ void GameEngine::ProcessGfxCommands(Gfx* commands) {
 
     wnd->EnableSRGBMode();
     wnd->SetRendererUCode(UcodeHandlers::ucode_f3dex);
-
+#ifndef __vita__
     std::vector<std::unordered_map<Mtx*, MtxF>> mtx_replacements;
+#endif
     int target_fps = CVarGetInteger("gInterpolationFPS", 60);
     static int last_fps;
     static int last_update_rate;
     static int time;
+#ifdef AUTO_FRAMESKIP
+    static float frametime = 0.0f;
+    static float current_frametime = 0.0f;
+#endif
     int fps = target_fps;
     int original_fps = 60 / gVIsPerFrame;
 
@@ -360,8 +378,13 @@ void GameEngine::ProcessGfxCommands(Gfx* commands) {
 
     if (last_fps != fps || last_update_rate != gVIsPerFrame) {
         time = 0;
+#ifdef AUTO_FRAMESKIP
+        current_frametime = 0.0f;
+        frametime = 1.0f / (float)fps;
+#endif
     }
 
+#ifndef __vita__
     // time_base = fps * original_fps (one second)
     int next_original_frame = fps;
 
@@ -375,6 +398,7 @@ void GameEngine::ProcessGfxCommands(Gfx* commands) {
     }
 
     time -= fps;
+#endif
 
     int threshold = CVarGetInteger("gExtraLatencyThreshold", 80);
 
@@ -382,14 +406,34 @@ void GameEngine::ProcessGfxCommands(Gfx* commands) {
         wnd->SetTargetFps(fps);
         wnd->SetMaximumFrameLatency(threshold > 0 && target_fps >= threshold ? 2 : 1);
     }
-
+#ifndef __vita__
     // When the gfx debugger is active, only run with the final mtx
     if (GfxDebuggerIsDebugging()) {
         mtx_replacements.clear();
         mtx_replacements.emplace_back();
     }
+#endif
 
+#ifdef __vita__
+#ifdef AUTO_FRAMESKIP
+    current_frametime -= frametime;
+    if (current_frametime < 0.0f) {
+        static uint32_t tick = sceKernelGetProcessTimeLow();
+        RunCommands(commands);
+        uint32_t new_tick = sceKernelGetProcessTimeLow();
+        if (new_tick - tick < 500000) {// When there's a stutter (0.5s), don't count it for the frameskip
+            current_frametime += (float)(new_tick - tick) / 1000000.0f;
+        } else {
+            current_frametime += frametime;
+        }
+        tick = new_tick;
+    }
+#else
+    RunCommands(commands);
+#endif
+#else
     RunCommands(commands, mtx_replacements);
+#endif
 
     last_fps = fps;
     last_update_rate = gVIsPerFrame;

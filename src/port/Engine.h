@@ -32,7 +32,11 @@ class GameEngine {
     static void EndAudioFrame();
     static void AudioInit();
     static void AudioExit();
+#ifdef __vita__
+    static void RunCommands(Gfx* Commands);
+#else
     static void RunCommands(Gfx* Commands, const std::vector<std::unordered_map<Mtx*, MtxF>>& mtx_replacements);
+#endif
     void ProcessFrame(void (*run_one_game_iter)()) const;
     static void Destroy();
     static void ProcessGfxCommands(Gfx* commands);
