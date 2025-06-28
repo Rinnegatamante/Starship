@@ -5,8 +5,94 @@
 
 #include "mixer.h"
 
+#include <macros.h>
+
 #ifndef __clang__
 #pragma GCC optimize ("unroll-loops")
+#endif
+
+#ifdef __vita__
+#define SSE2_AVAILABLE
+#include "sse2neon.h"
+#endif
+
+#ifdef SSE2_AVAILABLE
+typedef struct {
+    __m128i lo, hi;
+} m256i;
+
+static m256i m256i_mul_epi16(__m128i a, __m128i b) {
+    m256i res;
+    res.lo = _mm_mullo_epi16(a, b);
+    res.hi = _mm_mulhi_epi16(a, b);
+
+    m256i ret;
+    ret.lo = _mm_unpacklo_epi16(res.lo, res.hi);
+    ret.hi = _mm_unpackhi_epi16(res.lo, res.hi);
+    return ret;
+}
+
+static m256i m256i_add_m256i_epi32(m256i a, m256i b) {
+    m256i res;
+    res.lo = _mm_add_epi32(a.lo, b.lo);
+    res.hi = _mm_add_epi32(a.hi, b.hi);
+    return res;
+}
+
+static m256i m256i_add_m128i_epi32(m256i a, __m128i b) {
+    m256i res;
+    res.lo = _mm_add_epi32(a.lo, b);
+    res.hi = _mm_add_epi32(a.hi, b);
+    return res;
+}
+
+static m256i m256i_srai(m256i a, int b) {
+    m256i res;
+    res.lo = _mm_srai_epi32(a.lo, b);
+    res.hi = _mm_srai_epi32(a.hi, b);
+    return res;
+}
+
+static __m128i m256i_clamp_to_m128i(m256i a) {
+    return _mm_packs_epi32(a.lo, a.hi);
+}
+
+static const ALIGN_ASSET(16) int32_t x4000[4] = {
+    0x4000,
+    0x4000,
+    0x4000,
+    0x4000,
+};
+
+static void mm128_transpose(__m128i* r0, __m128i* r1, __m128i* r2, __m128i* r3) {
+    __m128 tmp0, tmp1, tmp2, tmp3;
+    __m128 row0, row1, row2, row3;
+
+    row0 = _mm_castsi128_ps(*r0);
+    row1 = _mm_castsi128_ps(*r1);
+    row2 = _mm_castsi128_ps(*r2);
+    row3 = _mm_castsi128_ps(*r3);
+
+    tmp0 = _mm_shuffle_ps(row0, row1, _MM_SHUFFLE(2, 0, 2, 0)); // 0 2 4 6
+    tmp1 = _mm_shuffle_ps(row0, row1, _MM_SHUFFLE(3, 1, 3, 1)); // 1 3 5 7
+    tmp2 = _mm_shuffle_ps(row2, row3, _MM_SHUFFLE(2, 0, 2, 0)); // 8 a c e
+    tmp3 = _mm_shuffle_ps(row2, row3, _MM_SHUFFLE(3, 1, 3, 1)); // 9 b d f
+
+    row0 = _mm_shuffle_ps(tmp0, tmp2, _MM_SHUFFLE(2, 0, 2, 0)); // 0 4 8 c
+    row1 = _mm_shuffle_ps(tmp1, tmp3, _MM_SHUFFLE(2, 0, 2, 0)); // 1 5 9 d
+    row2 = _mm_shuffle_ps(tmp0, tmp2, _MM_SHUFFLE(3, 1, 3, 1)); // 2 6 a e
+    row3 = _mm_shuffle_ps(tmp1, tmp3, _MM_SHUFFLE(3, 1, 3, 1)); // 3 7 b f
+
+    *r0 = _mm_castps_si128(row0);
+    *r1 = _mm_castps_si128(row1);
+    *r2 = _mm_castps_si128(row2);
+    *r3 = _mm_castps_si128(row3);
+}
+
+static __m128i move_two_4x16(int16_t* a, int16_t* b) {
+    return _mm_set_epi64(_mm_movepi64_pi64(_mm_loadl_epi64((__m128i*) a)),
+                         _mm_movepi64_pi64(_mm_loadl_epi64((__m128i*) b)));
+}
 #endif
 
 #define ROUND_UP_64(v) (((v) + 63) & ~63)
@@ -218,6 +304,7 @@ void aSetLoopImpl(ADPCM_STATE *adpcm_loop_state) {
     rspa.adpcm_loop_state = adpcm_loop_state;
 }
 
+#if !defined(SSE2_AVAILABLE) || defined(__vita__)
 void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
     uint8_t *in = BUF_U8(rspa.in);
     int16_t *out = BUF_S16(rspa.out);
@@ -268,7 +355,131 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
     }
     memcpy(state, out - 16, 16 * sizeof(int16_t));
 }
+#else
+static uint16_t lower_4bit[] = {
+    0xf,
+    0xf,
+    0xf,
+    0xf,
+};
 
+static uint16_t lower_2bit[] = {
+    0x3,
+    0x3,
+};
+
+void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
+    uint8_t* in = BUF_U8(rspa.in);
+    int16_t* out = BUF_S16(rspa.out);
+    int nbytes = ROUND_UP_32(rspa.nbytes);
+    if (flags & A_INIT) {
+        memset(out, 0, 16 * sizeof(int16_t));
+    } else if (flags & A_LOOP) {
+        memcpy(out, rspa.adpcm_loop_state, 16 * sizeof(int16_t));
+    } else {
+        memcpy(out, state, 16 * sizeof(int16_t));
+    }
+    out += 16;
+
+    __m128i mask_4bit = _mm_loadl_epi64((__m128i*) lower_4bit);
+    __m128i mask_2bit = _mm_loadl_epi64((__m128i*) lower_2bit);
+
+    while (nbytes > 0) {
+        int shift = *in >> 4; // should be in 0..12 or 0..14
+        __m128i shift_vec = _mm_set1_epi16(shift);
+        int table_index = *in++ & 0xf; // should be in 0..7
+        int16_t(*tbl)[8] = rspa.adpcm_table[table_index];
+
+        for (int i = 0; i < 2; i++) {
+            int16_t ins[8];
+            int16_t prev1 = out[-1];
+            int16_t prev2 = out[-2];
+            __m128i prev1_vec = _mm_set1_epi16(prev1);
+            __m128i prev2_vec = _mm_set1_epi16(prev2);
+
+            __m128i ins_vec;
+            if (flags & 4) {
+                ins_vec = _mm_loadu_si16((__m128i*) in);
+                ins_vec = _mm_unpacklo_epi8(ins_vec, _mm_setzero_si128());
+                __m128i in_vec_up2bit = _mm_srli_epi16(ins_vec, 6);
+                __m128i in_vec_uplower2bit = _mm_and_si128(_mm_srli_epi16(ins_vec, 4), mask_2bit);
+                __m128i in_vec_lowerup2bit = _mm_and_si128(_mm_srli_epi16(ins_vec, 2), mask_2bit);
+                __m128i in_vec_lower2bit = _mm_and_si128(ins_vec, mask_2bit);
+                __m128i in_vec_up = _mm_unpacklo_epi16(in_vec_up2bit, in_vec_uplower2bit);
+                in_vec_up = _mm_shuffle_epi32(in_vec_up, _MM_SHUFFLE(3, 1, 2, 0));
+                __m128i in_vec_low = _mm_unpacklo_epi16(in_vec_lower2bit, in_vec_lowerup2bit);
+                in_vec_low = _mm_shuffle_epi32(in_vec_low, _MM_SHUFFLE(3, 1, 2, 0));
+                ins_vec = _mm_unpacklo_epi32(in_vec_up, in_vec_low);
+                ins_vec = _mm_slli_epi16(ins_vec, 14);
+                ins_vec = _mm_srai_epi16(ins_vec, 14);
+                ins_vec = _mm_slli_epi16(ins_vec, shift);
+
+                in += 2;
+            } else {
+                ins_vec = _mm_loadu_si32((__m128i*) in);
+                ins_vec = _mm_unpacklo_epi8(ins_vec, _mm_setzero_si128());
+                __m128i in_vec_up4bit = _mm_srli_epi16(ins_vec, 4);
+                __m128i in_vec_lower4bit = _mm_and_si128(ins_vec, mask_4bit);
+                ins_vec = _mm_unpacklo_epi16(in_vec_up4bit, in_vec_lower4bit);
+                ins_vec = _mm_slli_epi16(ins_vec, 12);
+                ins_vec = _mm_srai_epi16(ins_vec, 12);
+                ins_vec = _mm_slli_epi16(ins_vec, shift);
+
+                in += 4;
+            }
+            _mm_storeu_si128((__m128i*) ins, ins_vec);
+
+            for (int j = 0; j < 2; j++) {
+                __m128i tbl0_vec = _mm_loadu_si64((__m128i*) (tbl[0] + (j * 4)));
+                __m128i tbl1_vec = _mm_loadu_si64((__m128i*) (tbl[1] + (j * 4)));
+
+                m256i res;
+                res.lo = _mm_mullo_epi16(tbl0_vec, prev2_vec);
+                res.hi = _mm_mulhi_epi16(tbl0_vec, prev2_vec);
+
+                tbl0_vec = _mm_unpacklo_epi16(res.lo, res.hi);
+
+                res.lo = _mm_mullo_epi16(tbl1_vec, prev1_vec);
+                res.hi = _mm_mulhi_epi16(tbl1_vec, prev1_vec);
+
+                tbl1_vec = _mm_unpacklo_epi16(res.lo, res.hi);
+                __m128i acc_vec = _mm_add_epi32(tbl0_vec, tbl1_vec);
+
+                __m128i shift_ins = _mm_srai_epi32(j ? _mm_unpackhi_epi16(_mm_setzero_si128(), ins_vec)
+                                                     : _mm_unpacklo_epi16(_mm_setzero_si128(), ins_vec),
+                                                   5);
+                acc_vec = _mm_add_epi32(acc_vec, shift_ins);
+
+                tbl1_vec = _mm_loadu_si128((__m128i*) tbl[1]);
+                if (j == 0) {
+                    tbl1_vec = _mm_slli_si128(tbl1_vec, (1 - 0) * 8 + 2);
+                } else {
+                    tbl1_vec = _mm_slli_si128(tbl1_vec, (1 - 1) * 8 + 2);
+                }
+                for (int k = 0; k < ((j + 1) * 4); k++) {
+                    __m128i ins_vec2 = _mm_set1_epi16(ins[k]);
+                    res.lo = _mm_mullo_epi16(tbl1_vec, ins_vec2);
+                    res.hi = _mm_mulhi_epi16(tbl1_vec, ins_vec2);
+
+                    __m128i mult = _mm_unpackhi_epi16(res.lo, res.hi);
+                    acc_vec = _mm_add_epi32(acc_vec, mult);
+                    tbl1_vec = _mm_slli_si128(tbl1_vec, 2);
+                }
+
+                acc_vec = _mm_srai_epi32(acc_vec, 11);
+                acc_vec = _mm_packs_epi32(acc_vec, _mm_setzero_si128());
+                _mm_storeu_si64((__m128*) out, acc_vec);
+                out += 4;
+            }
+        }
+        nbytes -= 16 * sizeof(int16_t);
+    }
+    memcpy(state, out - 16, 16 * sizeof(int16_t));
+}
+
+#endif
+
+#if !defined(SSE2_AVAILABLE) || defined(__vita__)
 void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     int16_t tmp[16];
     int16_t *in_initial = BUF_S16(rspa.in);
@@ -319,6 +530,131 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     state[5] = i;
     memcpy(state + 8, in, 8 * sizeof(int16_t));
 }
+#else
+void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
+    int16_t tmp[32];
+    int16_t* in_initial = BUF_S16(rspa.in);
+    int16_t* in = in_initial;
+    int16_t* out = BUF_S16(rspa.out);
+    int nbytes = ROUND_UP_16(rspa.nbytes);
+    uint32_t pitch_accumulator;
+    int i;
+
+    if (flags & A_INIT) {
+        memset(tmp, 0, 5 * sizeof(int16_t));
+    } else {
+        memcpy(tmp, state, 16 * sizeof(int16_t));
+    }
+    if (flags & 2) {
+        memcpy(in - 8, tmp + 8, 8 * sizeof(int16_t));
+        in -= tmp[5] / sizeof(int16_t);
+    }
+    in -= 4;
+    pitch_accumulator = (uint16_t) tmp[4];
+    memcpy(in, tmp, 4 * sizeof(int16_t));
+
+    __m128i x4000Vec = _mm_load_si128((__m128i*) x4000);
+
+    do {
+        for (i = 0; i < 2; i++) {
+            int16_t* tbl0 = resample_table[pitch_accumulator * 64 >> 16];
+
+            int16_t* in0 = in;
+
+            pitch_accumulator += (pitch << 1);
+            in += pitch_accumulator >> 16;
+            pitch_accumulator %= 0x10000;
+
+            int16_t* tbl1 = resample_table[pitch_accumulator * 64 >> 16];
+
+            int16_t* in1 = in;
+
+            pitch_accumulator += (pitch << 1);
+            in += pitch_accumulator >> 16;
+            pitch_accumulator %= 0x10000;
+
+            int16_t* tbl2 = resample_table[pitch_accumulator * 64 >> 16];
+
+            int16_t* in2 = in;
+
+            pitch_accumulator += (pitch << 1);
+            in += pitch_accumulator >> 16;
+            pitch_accumulator %= 0x10000;
+
+            int16_t* tbl3 = resample_table[pitch_accumulator * 64 >> 16];
+
+            int16_t* in3 = in;
+
+            pitch_accumulator += (pitch << 1);
+            in += pitch_accumulator >> 16;
+            pitch_accumulator %= 0x10000;
+
+            __m128i vec_in0 = move_two_4x16(in1, in0);
+
+            __m128i vec_tbl0 = move_two_4x16(tbl1, tbl0);
+
+            __m128i vec_in1 = move_two_4x16(in3, in2);
+
+            __m128i vec_tbl1 = move_two_4x16(tbl3, tbl2);
+
+            // we multiply in by tbl
+
+            m256i res;
+            res.lo = _mm_mullo_epi16(vec_in0, vec_tbl0);
+            res.hi = _mm_mulhi_epi16(vec_in0, vec_tbl0);
+
+            __m128i out0_vec = _mm_unpacklo_epi16(res.lo, res.hi);
+            __m128i out1_vec = _mm_unpackhi_epi16(res.lo, res.hi);
+
+            res.lo = _mm_mullo_epi16(vec_in1, vec_tbl1);
+            res.hi = _mm_mulhi_epi16(vec_in1, vec_tbl1);
+
+            __m128i out2_vec = _mm_unpacklo_epi16(res.lo, res.hi);
+            __m128i out3_vec = _mm_unpackhi_epi16(res.lo, res.hi);
+
+            // transpose to more easily make a sum at the end
+
+            mm128_transpose(&out0_vec, &out1_vec, &out2_vec, &out3_vec);
+
+            // add 0x4000
+
+            out0_vec = _mm_add_epi32(out0_vec, x4000Vec);
+            out1_vec = _mm_add_epi32(out1_vec, x4000Vec);
+            out2_vec = _mm_add_epi32(out2_vec, x4000Vec);
+            out3_vec = _mm_add_epi32(out3_vec, x4000Vec);
+
+            // shift by 15
+
+            out0_vec = _mm_srai_epi32(out0_vec, 15);
+            out1_vec = _mm_srai_epi32(out1_vec, 15);
+            out2_vec = _mm_srai_epi32(out2_vec, 15);
+            out3_vec = _mm_srai_epi32(out3_vec, 15);
+
+            // sum all to make sample
+            __m128i sample_vec = _mm_add_epi32(_mm_add_epi32(_mm_add_epi32(out0_vec, out1_vec), out2_vec), out3_vec);
+
+            // at the end we do this below but four time
+            // sample = ((in[0] * tbl[0] + 0x4000) >> 15) + ((in[1] * tbl[1] + 0x4000) >> 15) +
+            //          ((in[2] * tbl[2] + 0x4000) >> 15) + ((in[3] * tbl[3] + 0x4000) >> 15);
+            sample_vec = _mm_packs_epi32(sample_vec, _mm_setzero_si128());
+            _mm_storeu_si64(out, sample_vec);
+
+            out += 4;
+        }
+        nbytes -= 8 * sizeof(int16_t);
+    } while (nbytes > 0);
+
+    state[4] = (int16_t) pitch_accumulator;
+    memcpy(state, in, 4 * sizeof(int16_t));
+    i = (in - in_initial + 4) & 7;
+    in -= i;
+    if (i != 0) {
+        i = -8 - i;
+    }
+    state[5] = i;
+    memcpy(state + 8, in, 8 * sizeof(int16_t));
+}
+#endif
 
 void aEnvSetup1Impl(uint8_t initial_vol_wet, uint16_t rate_wet, uint16_t rate_left, uint16_t rate_right) {
     rspa.vol_wet = (uint16_t)(initial_vol_wet << 8);
@@ -332,6 +668,7 @@ void aEnvSetup2Impl(uint16_t initial_vol_left, uint16_t initial_vol_right) {
     rspa.vol[1] = initial_vol_right;
 }
 
+#ifndef SSE2_AVAILABLE
 void aEnvMixerImpl(uint16_t in_addr, uint16_t n_samples, bool swap_reverb,
 				   bool neg_3, bool neg_2,
                    bool neg_left, bool neg_right,
@@ -367,7 +704,63 @@ void aEnvMixerImpl(uint16_t in_addr, uint16_t n_samples, bool swap_reverb,
         n -= 8;
     } while (n > 0);
 }
+#else
+// SSE2 optimized version of algorithm
+void aEnvMixerImpl(uint16_t in_addr, uint16_t n_samples, bool swap_reverb,
+				   bool neg_3, bool neg_2,
+                   bool neg_left, bool neg_right,
+                   int32_t wet_dry_addr, u32 unk)
+{
+    int16_t *in = BUF_S16(in_addr);
+    int16_t *dry[2] = {BUF_S16(((wet_dry_addr >> 24) & 0xFF) << 4), BUF_S16(((wet_dry_addr >> 16) & 0xFF) << 4)};
+    int16_t *wet[2] = {BUF_S16(((wet_dry_addr >> 8) & 0xFF) << 4), BUF_S16(((wet_dry_addr) & 0xFF) << 4)};
+    int16_t negs[4] = {neg_left ? -1 : 0, neg_right ? -1 : 0, neg_3 ? -4 : 0, neg_2 ? -2 : 0};
+    int n = ROUND_UP_16(n_samples);
+    const int n_aligned = n - (n % 8);
 
+    uint16_t vols[2] = {rspa.vol[0], rspa.vol[1]};
+    uint16_t rates[2] = {rspa.rate[0], rspa.rate[1]};
+    uint16_t vol_wet = rspa.vol_wet;
+    uint16_t rate_wet = rspa.rate_wet;
+
+    const __m128i* in_ptr = (__m128i*)in;
+    const __m128i* d_ptr[2] = { (__m128i*) dry[0], (__m128i*) dry[1] };
+    const __m128i* w_ptr[2] = { (__m128i*) wet[0], (__m128i*) wet[1] };
+
+    // Aligned loop
+    for (int N = 0; N < n_aligned; N+=8) {
+
+        // Init vectors
+        const __m128i in_channels = _mm_loadu_si128(in_ptr++);
+        __m128i d[2] = { _mm_loadu_si128(d_ptr[0]), _mm_loadu_si128(d_ptr[1]) };
+        __m128i w[2] = { _mm_loadu_si128(w_ptr[0]), _mm_loadu_si128(w_ptr[1]) };
+
+        // Compute base samples
+        // sample = ((in * vols) >> 16) ^ negs
+        __m128i s[2] = {
+            _mm_xor_si128(_mm_mulhi_epi16(in_channels, _mm_set1_epi16(vols[0])), _mm_set1_epi16(negs[0])),
+            _mm_xor_si128(_mm_mulhi_epi16(in_channels, _mm_set1_epi16(vols[1])), _mm_set1_epi16(negs[1]))
+        };
+
+        // Compute left swapped samples
+        // (sample * vol_wet) >> 16) ^ negs
+        __m128i ss[2] = {
+            _mm_xor_si128(_mm_mulhi_epi16(s[swap_reverb], _mm_set1_epi16(vol_wet)), _mm_set1_epi16(negs[2])),
+            _mm_xor_si128(_mm_mulhi_epi16(s[!swap_reverb], _mm_set1_epi16(vol_wet)), _mm_set1_epi16(negs[3]))
+        };
+
+        // Store values to buffers
+        for (int j = 0; j < 2; j++) {
+            _mm_storeu_si128((__m128i*) d_ptr[j]++, _mm_adds_epi16(s[j], d[j]));
+            _mm_storeu_si128((__m128i*) w_ptr[j]++, _mm_adds_epi16(ss[j], w[j]));
+            vols[j] += rates[j];
+        }
+        vol_wet += rate_wet;
+    }
+}
+#endif
+
+#ifndef SSE2_AVAILABLE
 void aMixImpl(uint16_t count, int16_t gain, uint16_t in_addr, uint16_t out_addr) {
     int nbytes = ROUND_UP_32(ROUND_DOWN_16(count << 4));
     int16_t *in = BUF_S16(in_addr);
@@ -394,6 +787,69 @@ void aMixImpl(uint16_t count, int16_t gain, uint16_t in_addr, uint16_t out_addr)
         nbytes -= 16 * sizeof(int16_t);
     }
 }
+#else
+static const ALIGN_ASSET(16) int16_t x7fff[8] = {
+    0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF,
+};
+
+void aMixImpl(uint16_t count, int16_t gain, uint16_t in_addr, uint16_t out_addr) {
+    int nbytes = ROUND_UP_32(ROUND_DOWN_16(count << 4));
+    int16_t* in = BUF_S16(in_addr);
+    int16_t* out = BUF_S16(out_addr);
+    int i;
+    int32_t sample;
+
+    if (gain == -0x8000) {
+        while (nbytes > 0) {
+            for (unsigned int i = 0; i < 2; i++) {
+                __m128i outVec = _mm_loadu_si128((__m128i*) out);
+                __m128i inVec = _mm_loadu_si128((__m128i*) in);
+                __m128i subsVec = _mm_subs_epi16(outVec, inVec);
+                _mm_storeu_si128((__m128i*) out, subsVec);
+                nbytes -= 8 * sizeof(int16_t);
+                in += 8;
+                out += 8;
+            }
+        }
+    }
+
+    __m128i x7fffVec = _mm_load_si128((__m128i*) x7fff);
+    __m128i x4000Vec = _mm_load_si128((__m128i*) x4000);
+    __m128i gainVec = _mm_set1_epi16(gain);
+
+    while (nbytes > 0) {
+        for (i = 0; i < 2; i++) {
+            // Load input and output data into vectors
+            __m128i outVec = _mm_loadu_si128((__m128i*) out);
+            __m128i inVec = _mm_loadu_si128((__m128i*) in);
+            // Multiply `out` by `0x7FFF` producing 32 bit results, and store the upper and lower bits in each vector.
+            // Equivalent to `out[0..8] * 0x7FFF`
+            m256i outx7fff = m256i_mul_epi16(outVec, x7fffVec);
+            // Same as above but for in and gain. Equivalent to `in[0..8] * gain`
+            m256i inxGain = m256i_mul_epi16(inVec, gainVec);
+            in += 8;
+
+            // Now we have 4 32 bit elements.  Continue the calculaton per the reference implementation.
+            // We already did out + 0x7fff and in * gain.
+            // *out * 0x7fff + *in++ * gain is the final result of these two calculations.
+            m256i addVec = m256i_add_m256i_epi32(outx7fff, inxGain);
+            // Add 0x4000
+            addVec = m256i_add_m128i_epi32(addVec, x4000Vec);
+            // Shift over by 15
+            m256i shiftedVec = m256i_srai(addVec, 15);
+            // Convert each 32 bit element to 16 bit with saturation (clamp) and store in `outVec`
+            outVec = m256i_clamp_to_m128i(shiftedVec);
+            // Write the final vector back to memory
+            // The final calculation is ((out[0..8] * 0x7fff + in[0..8] * gain) + 0x4000) >> 15;
+            _mm_storeu_si128((__m128i*) out, outVec);
+            out += 8;
+        }
+
+        nbytes -= 16 * sizeof(int16_t);
+    }
+}
+
+#endif
 
 void aS8DecImpl(uint8_t flags, ADPCM_STATE state) {
     uint8_t *in = BUF_U8(rspa.in);
