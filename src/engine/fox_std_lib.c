@@ -71,8 +71,7 @@ void Lib_Texture_Scroll(u16* texture, s32 width, s32 height, u8 mode) {
             break;
     }
 
-    // LTodo: we should only invalidate one texture
-    gSPInvalidateTexCache(gMasterDisp++, NULL);
+    gSPInvalidateTexCache(gMasterDisp++, pixel);
 }
 
 void Lib_Texture_Mottle(u16* dst, u16* src, u8 mode) {
@@ -135,8 +134,7 @@ void Lib_Texture_Mottle(u16* dst, u16* src, u8 mode) {
             break;
     }
 
-    // LTodo: we should only invalidate one texture
-    gSPInvalidateTexCache(gMasterDisp++, NULL);
+    gSPInvalidateTexCache(gMasterDisp++, dst);
 }
 
 s32 Animation_GetLimbIndex(Limb* limb, Limb** skeleton) {
