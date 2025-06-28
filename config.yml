@@ -36,14 +36,14 @@ d064229a32cc05ab85e2381ce07744eb3ffaf530:
     gbi: F3DEX
     sort: OFFSET
     output:
-      binary: ./mods/sf64jp.o2r
-      code: srcjp/assets
+      binary: mods/sf64jp.otr
+      code: src/assets
       headers: include/assets
-      modding: srcjp/assets
-    # enums:
-    #   - include/sf64object.h
-    #   - include/sf64level.h
-    #   - include/sf64mesg.h
-    #   - include/sf64audio_external.h
-    #   - include/sf64event.h
-    #   - include/sf64player.h
+      modding: src/assets
+    enums:
+      - include/sf64object.h
+      - include/sf64level.h
+      - include/sf64mesg.h
+      - include/sf64audio_external.h
+      - include/sf64event.h
+      - include/sf64player.h
