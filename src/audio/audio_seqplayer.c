@@ -909,7 +909,7 @@ void AudioSeq_SequenceChannelProcessScript(SequenceChannel* channel) {
 
                     case 0xEB:
                         cmd = AudioSeq_ScriptReadU8(state);
-                        sp52 = ((u16*) gSeqFontTable)[seqPlayer->seqId];
+                        sp52 = BSWAP16(((u16*) gSeqFontTable)[seqPlayer->seqId]);
                         loBits = gSeqFontTable[sp52];
                         cmd = gSeqFontTable[sp52 + loBits - cmd];
                         // if (AudioHeap_SearchCaches(FONT_TABLE, CACHE_EITHER, cmd) != NULL)

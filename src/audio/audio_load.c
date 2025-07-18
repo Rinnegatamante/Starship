@@ -234,7 +234,9 @@ void AudioLoad_InitTable(AudioTable* table, u8* romAddr, u16 unkMediumParam) {
 }
 
 void* AudioLoad_SyncLoadSeqFonts(s32 seqId, u32* outFontId) {
+    return NULL;
     s32 index = ((u16*) gSeqFontTable)[AudioLoad_GetLoadTableIndex(SEQUENCE_TABLE, seqId)];
+    printf("AudioLoad_SyncLoadSeqFonts index: %d ", index);
     s32 fontId = 0xFF;
     s32 numFonts = gSeqFontTable[index++];
     void* soundFontData = NULL;
@@ -247,7 +249,7 @@ void* AudioLoad_SyncLoadSeqFonts(s32 seqId, u32* outFontId) {
     *outFontId = fontId;
     gSeqLoadStatus[seqId] = 2;
 
-    return soundFontData;
+    return NULL;
 }
 
 void AudioLoad_SyncLoadSeqParts(s32 seqId, s32 flags) {
@@ -283,6 +285,10 @@ s32 AudioLoad_SyncLoadSample(Sample* sample, s32 fontId) {
         sample->medium = MEDIUM_RAM;
         sample->sampleAddr = sampleAddr;
     }
+    
+#ifdef AVOID_UB
+    return 0;
+#endif
 }
 
 s32 AudioLoad_SyncLoadInstrument(s32 fontId, s32 instId, s32 drumId) {
