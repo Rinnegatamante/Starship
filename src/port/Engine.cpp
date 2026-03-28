@@ -220,7 +220,7 @@ void GameEngine::StartFrame() const {
 
 #ifdef __vita__
 #include <vitasdk.h>
-#define AUTO_FRAMESKIP
+//#define AUTO_FRAMESKIP
 #endif
 
 #define NUM_AUDIO_CHANNELS 2
@@ -234,6 +234,9 @@ extern "C" int countermin = 0;
 
 extern "C" unsigned short samples_high = SAMPLES_HIGH;
 extern "C" unsigned short samples_low = SAMPLES_LOW;
+
+#define MAX_AUDIO_FRAMES_PER_UPDATE 5 // Compile-time constant with max value of gVIsPerFrame
+s16 audio_buffer[SAMPLES_HIGH * NUM_AUDIO_CHANNELS * MAX_AUDIO_FRAMES_PER_UPDATE] = { 0 };
 
 void GameEngine::HandleAudioThread() {
 #ifdef PIPE_DEBUG
@@ -266,7 +269,6 @@ void GameEngine::HandleAudioThread() {
             countermin++;
         }
 
-        s16 audio_buffer[SAMPLES_HIGH * NUM_AUDIO_CHANNELS * 3] = { 0 };
         for (int i = 0; i < AUDIO_FRAMES_PER_UPDATE; i++) {
             AudioThread_CreateNextAudioBuffer(audio_buffer + i * (num_audio_samples * NUM_AUDIO_CHANNELS),
                                               num_audio_samples);
@@ -325,17 +327,6 @@ void GameEngine::AudioExit() {
     audio.thread.join();
 }
 
-#ifdef __vita__
-void GameEngine::RunCommands(Gfx* Commands) {
-    gfx_run(Commands);
-    gfx_end_frame();
-	
-	if (ShouldClearTextureCacheAtEndOfFrame) {
-        gfx_texture_cache_clear();
-        ShouldClearTextureCacheAtEndOfFrame = false;
-    }
-}
-#else
 void GameEngine::RunCommands(Gfx* Commands, const std::vector<std::unordered_map<Mtx*, MtxF>>& mtx_replacements) {
     for (const auto& m : mtx_replacements) {
         gfx_run(Commands, m);
@@ -347,7 +338,6 @@ void GameEngine::RunCommands(Gfx* Commands, const std::vector<std::unordered_map
         ShouldClearTextureCacheAtEndOfFrame = false;
     }
 }
-#endif
 
 void GameEngine::ProcessGfxCommands(Gfx* commands) {
     auto wnd = std::dynamic_pointer_cast<Fast::Fast3dWindow>(Ship::Context::GetInstance()->GetWindow());
@@ -358,9 +348,7 @@ void GameEngine::ProcessGfxCommands(Gfx* commands) {
 
     wnd->EnableSRGBMode();
     wnd->SetRendererUCode(UcodeHandlers::ucode_f3dex);
-#ifndef __vita__
     std::vector<std::unordered_map<Mtx*, MtxF>> mtx_replacements;
-#endif
     int target_fps = CVarGetInteger("gInterpolationFPS", 60);
     static int last_fps;
     static int last_update_rate;
@@ -384,7 +372,6 @@ void GameEngine::ProcessGfxCommands(Gfx* commands) {
 #endif
     }
 
-#ifndef __vita__
     // time_base = fps * original_fps (one second)
     int next_original_frame = fps;
 
@@ -398,7 +385,6 @@ void GameEngine::ProcessGfxCommands(Gfx* commands) {
     }
 
     time -= fps;
-#endif
 
     int threshold = CVarGetInteger("gExtraLatencyThreshold", 80);
 
@@ -414,7 +400,6 @@ void GameEngine::ProcessGfxCommands(Gfx* commands) {
     }
 #endif
 
-#ifdef __vita__
 #ifdef AUTO_FRAMESKIP
     current_frametime -= frametime;
     if (current_frametime < 0.0f) {
@@ -428,12 +413,8 @@ void GameEngine::ProcessGfxCommands(Gfx* commands) {
         }
         tick = new_tick;
     }
-#else
-    RunCommands(commands);
 #endif
-#else
     RunCommands(commands, mtx_replacements);
-#endif
 
     last_fps = fps;
     last_update_rate = gVIsPerFrame;
