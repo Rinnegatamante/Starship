@@ -1,3 +1,19 @@
+# Starship Vita
+
+This is a port of Starship (v.1.0.0 for now but planned to be moved up to latest upstream) for PSVita.
+
+## Setup Instructions
+- Download [Starship v.1.0.0](https://github.com/HarbourMasters/Starship/releases/tag/v1.0.0) for PC.
+- Follow its instructions to generate `sf64.otr`.
+- Place `sf64.otr` and `starship.otr` in `ux0:data/starship`.
+- Install the vpk.
+
+## Credits
+- TheIronUniverse for the Livearea assets.
+- hatoving for testing the homebrew.
+
+# Original Readme
+
 [comment]: <> (Todo: Make Light Mode Image)
 [comment]: <> (Todo: Make Dark Mode Image)
 
