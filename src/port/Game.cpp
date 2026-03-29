@@ -5,7 +5,7 @@
 
 #ifdef __vita__
 #include <vitasdk.h>
-int _newlib_heap_size_user = 256 * 1024 * 1024;
+int _newlib_heap_size_user = 300 * 1024 * 1024;
 #endif
 
 extern "C" {
@@ -34,6 +34,10 @@ void push_frame() {
     GameEngine::EndAudioFrame();
 }
 
+#ifdef __vita__
+extern "C" void *vita_main(void *argv);
+#endif
+
 #ifdef _WIN32
 int SDL_main(int argc, char **argv) {
 #else
@@ -48,6 +52,17 @@ int main(int argc, char *argv[]) {
     scePowerSetGpuClockFrequency(222);
     scePowerSetGpuXbarClockFrequency(166);
     sceIoMkdir("ux0:data/starship/shader_cache", 0777);
+    
+    sceClibPrintf("Starting main thread...\n");
+    pthread_t t;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setstacksize(&attr, 2 * 1024 * 1024);
+    pthread_create(&t, &attr, vita_main, NULL);
+    return sceKernelExitDeleteThread(0);
+}
+
+extern "C" void *vita_main(void *argv) {
 #endif
     GameEngine::Create();
     Main_SetVIMode();
