@@ -225,7 +225,7 @@ void Background_DrawStarfield(void) {
         zCos = __cosf(gStarfieldRoll);
         zSin = __sinf(gStarfieldRoll);
 
-        if (CVarGetInteger("gDisableStarsInterpolation", 0) == 1) {
+        if (CVarGetInteger("gDisableStarsInterpolation", 1) == 1) {
             FrameInterpolation_ShouldInterpolateFrame(false);
         }
 
@@ -299,7 +299,7 @@ void Background_DrawStarfield(void) {
             }
         }
 
-        if (CVarGetInteger("gDisableStarsInterpolation", 0) == 1) {
+        if (CVarGetInteger("gDisableStarsInterpolation", 1) == 1) {
             FrameInterpolation_ShouldInterpolateFrame(true);
         }
     }
