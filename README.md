@@ -12,6 +12,10 @@ This is a port of Starship (v.1.0.0 for now but planned to be moved up to latest
 - TheIronUniverse for the Livearea assets.
 - hatoving for testing the homebrew.
 
+## vitaGL flags
+
+HAVE_GLSL_TEXTURE_SIZE=1 DEPTH_STENCIL_HACK=1 NO_DEBUG=1 HAVE_PTHREAD=1
+
 # Original Readme
 
 [comment]: <> (Todo: Make Light Mode Image)
