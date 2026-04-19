@@ -15,6 +15,8 @@ typedef enum {
 #include <Fast3D/interpreter.h>
 #include "libultraship/src/Context.h"
 
+#include "robin_hood.h"
+
 #ifndef IDYES
 #define IDYES 6
 #endif
@@ -37,7 +39,7 @@ class GameEngine {
     static void EndAudioFrame();
     static void AudioInit();
     static void AudioExit();
-    static void RunCommands(Gfx* Commands, const std::vector<std::unordered_map<Mtx*, MtxF>>& mtx_replacements);
+    static void RunCommands(Gfx* Commands, const std::vector<robin_hood::unordered_map<Mtx*, MtxF>>& mtx_replacements);
     static void Destroy();
 	static uint32_t GetInterpolationFPS();
 	static uint32_t GetInterpolationFrameCount();

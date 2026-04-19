@@ -10,6 +10,7 @@
 #include <vector>
 #include <stack>
 #include <string>
+#include <string_view>
 
 #include "graphic/Fast3D/lus_gbi.h"
 #include "libultraship/libultra/types.h"
@@ -29,6 +30,12 @@
 #ifdef __cplusplus
 #include <compare>
 #endif
+
+#ifdef __vita__
+#include <vitasdk.h>
+#endif
+
+#include "robin_hood.h"
 
 /*enum {
     CC_0,
@@ -176,6 +183,16 @@ struct TextureCacheKey {
     uint8_t palette_index;
     uint32_t size_bytes;
 
+#ifdef __vita__
+    bool operator==(const TextureCacheKey& rhs) const {
+        return !sceClibMemcmp(&rhs, this, sizeof(TextureCacheKey));
+    };
+    struct Hasher {
+        size_t operator()(const TextureCacheKey& key) const noexcept {
+            return (size_t)key.texture_addr;
+        }
+    };
+#else
     bool operator==(const TextureCacheKey&) const noexcept = default;
 
     struct Hasher {
@@ -184,6 +201,7 @@ struct TextureCacheKey {
             return (size_t)(addr ^ (addr >> 5));
         }
     };
+#endif
 };
 
 typedef std::unordered_map<TextureCacheKey, struct TextureCacheValue, TextureCacheKey::Hasher> TextureCacheMap;
@@ -364,7 +382,7 @@ class Interpreter {
     void GetDimensions(uint32_t* width, uint32_t* height, int32_t* posX, int32_t* posY);
     GfxRenderingAPI* GetCurrentRenderingAPI();
     void StartFrame();
-    void Run(Gfx* commands, const std::unordered_map<Mtx*, MtxF>& mtx_replacements);
+    void Run(Gfx* commands, const robin_hood::unordered_map<Mtx*, MtxF>& mtx_replacements);
     void EndFrame();
     void HandleWindowEvents();
     bool IsFrameReady();
@@ -465,8 +483,7 @@ class Interpreter {
     static const char* CCMUXtoStr(uint32_t ccmux);
     static const char* ACMUXtoStr(uint32_t acmux);
     static void GenerateCC(ColorCombiner* comb, const ColorCombinerKey& key);
-    static std::string GetBaseTexturePath(const std::string& path);
-    static void NormalizeVector(float v[3]);
+    static std::string_view GetBaseTexturePath(std::string_view path);static void NormalizeVector(float v[3]);
     static void TransposedMatrixMul(float res[3], const float a[3], const float b[4][4]);
     static void MatrixMul(float res[4][4], const float a[4][4], const float b[4][4]);
 
@@ -492,6 +509,9 @@ class Interpreter {
     unsigned int mMsaaLevel = 1;
     bool mDroppedFrame{};
     float* mBufVbo; // 3 vertices in a triangle and 32 floats per vtx
+#ifdef __vita__
+    float* mBufVboPtr;
+#endif
     size_t mBufVboLen{};
     size_t mBufVboNumTris{};
     GfxWindowBackend* mWapi = nullptr;
@@ -509,9 +529,9 @@ class Interpreter {
 
     std::set<std::pair<float, float>> mGetPixelDepthPending; // get_pixel_depth_pending;
     std::unordered_map<std::pair<float, float>, uint16_t, hash_pair_ff> mGetPixelDepthCached; // get_pixel_depth_cached;
-    std::map<std::string, MaskedTextureEntry> mMaskedTextures;
+    std::map<std::string, MaskedTextureEntry, std::less<>> mMaskedTextures;
 
-    const std::unordered_map<Mtx*, MtxF>* mCurMtxReplacements;
+    const robin_hood::unordered_map<Mtx*, MtxF>* mCurMtxReplacements;
     bool mMarkerOn; // This was originally a debug feature. Now it seems to control s2dex?
     std::vector<std::string> shader_ids;
     int mInterpolationIndex;
