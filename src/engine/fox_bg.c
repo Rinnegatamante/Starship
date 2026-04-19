@@ -224,10 +224,13 @@ void Background_DrawStarfield(void) {
 
         zCos = __cosf(gStarfieldRoll);
         zSin = __sinf(gStarfieldRoll);
-
-        if (CVarGetInteger("gDisableStarsInterpolation", 1) == 1) {
+#ifdef __vita__
+		FrameInterpolation_ShouldInterpolateFrame(false);
+#else
+        if (CVarGetInteger("gDisableStarsInterpolation", 0) == 1) {
             FrameInterpolation_ShouldInterpolateFrame(false);
         }
+#endif
 
         float originalWidth = currentScreenWidth / 3;
         float originalAspect = originalWidth / (currentScreenHeight / 3);
@@ -267,10 +270,10 @@ void Background_DrawStarfield(void) {
             // Check if the star is within the visible screen area with margin
             if (vx >= (marginX - STAR_MARGIN) && vx <= (marginX + renderMaskWidth + STAR_MARGIN) &&
                 vy >= (renderMaskHeight - STAR_MARGIN) && vy <= ((renderMaskHeight * 2) + STAR_MARGIN)) {
-
+#ifndef __vita__
                 FrameInterpolation_RecordOpenChild("Starfield", i);
                 FrameInterpolation_RecordMarker(__FILE__, __LINE__);
-
+#endif
                 // Translate to (vx, vy) in ortho coordinates
                 Matrix_Push(&gGfxMatrix);
                 Matrix_Translate(gGfxMatrix, vx - (currentScreenWidth / 2.0f), -(vy - (currentScreenHeight / 2.0f)),
@@ -291,17 +294,20 @@ void Background_DrawStarfield(void) {
                 // Draw the star using the predefined display list
                 gSPDisplayList(gMasterDisp++, starDL);
                 Matrix_Pop(&gGfxMatrix);
-
+#ifndef __vita__
                 FrameInterpolation_RecordCloseChild();
-
+#endif
                 gStarPrevX[i] = vx;
                 gStarPrevY[i] = vy;
             }
         }
-
+#ifndef __vita__
         if (CVarGetInteger("gDisableStarsInterpolation", 1) == 1) {
             FrameInterpolation_ShouldInterpolateFrame(true);
         }
+#else
+		FrameInterpolation_ShouldInterpolateFrame(true);
+#endif
     }
 
     // Restore original perspective after drawing stars
