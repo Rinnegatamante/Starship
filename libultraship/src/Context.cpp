@@ -200,17 +200,6 @@ void Context::InitResourceManager(const std::vector<std::string>& otrFiles,
         mResourceManager = std::make_shared<ResourceManager>();
         GetResourceManager()->Init(otrFiles, validHashes, reservedThreadCount);
     }
-
-    if (!GetResourceManager()->DidLoadSuccessfully()) {
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "OTR file not found",
-                                 "Main OTR file not found. Please generate one", nullptr);
-        SPDLOG_ERROR("Main OTR file not found!");
-#ifdef __IOS__
-        // We need this exit to close the app when we dismiss the dialog
-        exit(0);
-#endif
-        return;
-    }
 }
 
 void Context::InitControlDeck(std::vector<CONTROLLERBUTTONS_T> additionalBitmasks) {

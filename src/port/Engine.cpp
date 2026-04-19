@@ -330,7 +330,7 @@ void GameEngine::AudioExit() {
     audio.thread.join();
 }
 
-void GameEngine::RunCommands(Gfx* Commands, const std::vector<std::unordered_map<Mtx*, MtxF>>& mtx_replacements) {
+void GameEngine::RunCommands(Gfx* Commands, const std::vector<robin_hood::unordered_map<Mtx*, MtxF>>& mtx_replacements) {
     for (const auto& m : mtx_replacements) {
         gfx_run(Commands, m);
         gfx_end_frame();
@@ -351,7 +351,7 @@ void GameEngine::ProcessGfxCommands(Gfx* commands) {
 
     wnd->EnableSRGBMode();
     wnd->SetRendererUCode(UcodeHandlers::ucode_f3dex);
-    std::vector<std::unordered_map<Mtx*, MtxF>> mtx_replacements;
+    std::vector<robin_hood::unordered_map<Mtx*, MtxF>> mtx_replacements;
     int target_fps = CVarGetInteger("gInterpolationFPS", 30);
     static int last_fps;
     static int last_update_rate;

@@ -26,6 +26,8 @@
 #include <vitasdk.h>
 #endif
 
+#include "robin_hood.h"
+
 extern uintptr_t gSegmentPointers[];
 extern uintptr_t gfxFramebuffer;
 
@@ -249,7 +251,7 @@ struct GfxRenderingAPI* gfx_get_current_rendering_api(void);
 void gfx_start_frame(void);
 
 // Since this function is "exposted" to the games, it needs to take a normal Gfx
-void gfx_run(Gfx* commands, const std::unordered_map<Mtx*, MtxF>& mtx_replacements);
+void gfx_run(Gfx* commands, const robin_hood::unordered_map<Mtx*, MtxF>& mtx_replacements);
 void gfx_end_frame(void);
 void gfx_set_target_ucode(UcodeHandlers ucode);
 void gfx_set_target_fps(int);

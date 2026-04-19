@@ -7,7 +7,9 @@
 
 #include <unordered_map>
 
-std::unordered_map<Mtx*, MtxF> FrameInterpolation_Interpolate(float step);
+#include "robin_hood.h"
+
+robin_hood::unordered_map<Mtx*, MtxF> FrameInterpolation_Interpolate(float step);
 
 extern "C" {
 

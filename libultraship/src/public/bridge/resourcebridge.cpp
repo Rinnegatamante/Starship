@@ -3,23 +3,16 @@
 #include <string>
 #include <algorithm>
 #include "utils/StrHash64.h"
+#include "window/Window.h"
 
 std::shared_ptr<Ship::IResource> ResourceLoad(const char* name) {
     return Ship::Context::GetInstance()->GetResourceManager()->LoadResource(name);
 }
 
 std::shared_ptr<Ship::IResource> ResourceLoad(uint64_t crc) {
-    auto name = ResourceGetNameByCrc(crc);
-
-    if (name == nullptr || strlen(name) == 0) {
-        SPDLOG_TRACE("ResourceLoad: Unknown crc {}\n", crc);
-        return nullptr;
-    }
-
-    return ResourceLoad(name);
+    return Ship::Context::GetInstance()->GetResourceManager()->LoadResource(crc);
 }
 
-#include <vitasdk.h>
 extern "C" {
 
 uint64_t ResourceGetCrcByName(const char* name) {
@@ -27,58 +20,35 @@ uint64_t ResourceGetCrcByName(const char* name) {
 }
 
 const char* ResourceGetNameByCrc(uint64_t crc) {
-    const std::string* hashStr =
-        Ship::Context::GetInstance()->GetResourceManager()->GetArchiveManager()->HashToString(crc);
-    return hashStr != nullptr ? hashStr->c_str() : nullptr;
+    return Ship::Context::GetInstance()->GetResourceManager()->GetArchiveManager()->HashToCString(crc);
 }
 
 size_t ResourceGetSizeByName(const char* name) {
-    auto resource = ResourceLoad(name);
-
-    if (resource == nullptr) {
-        return 0;
-    }
-
-    return resource->GetPointerSize();
+    return Ship::Context::GetInstance()->GetResourceManager()->GetResourceSize(name);
 }
 
 size_t ResourceGetSizeByCrc(uint64_t crc) {
-    return ResourceGetSizeByName(ResourceGetNameByCrc(crc));
+    return Ship::Context::GetInstance()->GetResourceManager()->GetResourceSize(crc);
 }
 
 uint8_t ResourceGetIsCustomByName(const char* name) {
-    auto resource = ResourceLoad(name);
-
-    if (resource == nullptr) {
-        return false;
-    }
-
-    return resource->GetInitData()->IsCustom;
+    return Ship::Context::GetInstance()->GetResourceManager()->GetResourceIsCustom(name);
 }
 
 uint8_t ResourceGetIsCustomByCrc(uint64_t crc) {
-    return ResourceGetIsCustomByName(ResourceGetNameByCrc(crc));
+    return Ship::Context::GetInstance()->GetResourceManager()->GetResourceIsCustom(crc);
 }
 
 void* ResourceGetDataByName(const char* name) {
-    auto resource = ResourceLoad(name);
+    return Ship::Context::GetInstance()->GetResourceManager()->GetResourceRawPointer(name);
+}
 
-    if (resource == nullptr) {
-        return nullptr;
-    }
-
-    return resource->GetRawPointer();
+void* ResourceGetDataByNameOtr(const char* name) {
+    return Ship::Context::GetInstance()->GetResourceManager()->GetOtrResourceRawPointer(name);
 }
 
 void* ResourceGetDataByCrc(uint64_t crc) {
-    auto name = ResourceGetNameByCrc(crc);
-
-    if (name == nullptr || strlen(name) == 0) {
-        SPDLOG_TRACE("ResourceGetDataByCrc: Unknown crc 0x{:X}\n", crc);
-        return nullptr;
-    }
-
-    return ResourceGetDataByName(name);
+    return Ship::Context::GetInstance()->GetResourceManager()->GetResourceRawPointer(crc);
 }
 
 uint16_t ResourceGetTexWidthByName(const char* name) {
@@ -154,7 +124,7 @@ void ResourceGetGameVersions(uint32_t* versions, size_t versionsSize, size_t* ve
 }
 
 void ResourceLoadDirectoryAsync(const char* name) {
-    Ship::Context::GetInstance()->GetResourceManager()->LoadDirectoryAsync(name);
+    Ship::Context::GetInstance()->GetResourceManager()->LoadResources(name);
 }
 
 uint32_t ResourceHasGameVersion(uint32_t hash) {
@@ -163,11 +133,11 @@ uint32_t ResourceHasGameVersion(uint32_t hash) {
 }
 
 void ResourceLoadDirectory(const char* name) {
-    Ship::Context::GetInstance()->GetResourceManager()->LoadDirectory(name);
+    Ship::Context::GetInstance()->GetResourceManager()->LoadResources(name);
 }
 
 void ResourceDirtyDirectory(const char* name) {
-    Ship::Context::GetInstance()->GetResourceManager()->DirtyDirectory(name);
+    Ship::Context::GetInstance()->GetResourceManager()->DirtyResources(name);
 }
 
 void ResourceDirtyByName(const char* name) {
@@ -195,10 +165,10 @@ void ResourceUnloadByCrc(uint64_t crc) {
 }
 
 void ResourceUnloadDirectory(const char* name) {
-    Ship::Context::GetInstance()->GetResourceManager()->UnloadDirectory(name);
+    Ship::Context::GetInstance()->GetResourceManager()->UnloadResources(name);
 }
 
 uint32_t ResourceDoesOtrFileExist() {
-    return Ship::Context::GetInstance()->GetResourceManager()->DidLoadSuccessfully();
+    return Ship::Context::GetInstance()->GetResourceManager()->IsLoaded();
 }
 }

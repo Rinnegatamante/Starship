@@ -127,7 +127,7 @@ uint32_t gfx_msaa_level = 1;
 
 static bool dropped_frame;
 
-static const std::unordered_map<Mtx*, MtxF>* current_mtx_replacements;
+static const robin_hood::unordered_map<Mtx*, MtxF>* current_mtx_replacements;
 
 #ifdef __vita__
 float *buf_vbo_ptr;
@@ -163,7 +163,7 @@ struct MaskedTextureEntry {
     uint8_t* replacementData;
 };
 
-static map<string, MaskedTextureEntry> masked_textures;
+static map<string, MaskedTextureEntry, std::less<>> masked_textures;
 
 static UcodeHandlers ucode_handler_index = ucode_f3dex2;
 
@@ -2137,10 +2137,10 @@ static void gfx_dp_load_block(uint8_t tile, uint32_t uls, uint32_t ult, uint32_t
     // orig_size_bytes,
     //         g_rdp.texture_to_load.siz, lrs);
 
-    const std::string& texPath =
+    const std::string_view texPath =
         g_rdp.texture_to_load.raw_tex_metadata.resource != nullptr
             ? gfx_get_base_texture_path(g_rdp.texture_to_load.raw_tex_metadata.resource->GetInitData()->Path)
-            : "";
+            : std::string_view{};
     auto maskedTextureIter = masked_textures.find(texPath);
     if (maskedTextureIter != masked_textures.end()) {
         g_rdp.loaded_texture[g_rdp.texture_tile[tile].tmem_index].masked = true;
@@ -2207,10 +2207,10 @@ static void gfx_dp_load_tile(uint8_t tile, uint32_t uls, uint32_t ult, uint32_t 
     g_rdp.loaded_texture[g_rdp.texture_tile[tile].tmem_index].raw_tex_metadata = g_rdp.texture_to_load.raw_tex_metadata;
     g_rdp.loaded_texture[g_rdp.texture_tile[tile].tmem_index].addr = g_rdp.texture_to_load.addr + start_offset_bytes;
 
-    const std::string& texPath =
+    const std::string_view texPath =
         g_rdp.texture_to_load.raw_tex_metadata.resource != nullptr
             ? gfx_get_base_texture_path(g_rdp.texture_to_load.raw_tex_metadata.resource->GetInitData()->Path)
-            : "";
+            : std::string_view{};
     auto maskedTextureIter = masked_textures.find(texPath);
     if (maskedTextureIter != masked_textures.end()) {
         g_rdp.loaded_texture[g_rdp.texture_tile[tile].tmem_index].masked = true;
@@ -4217,7 +4217,7 @@ void gfx_start_frame(void) {
 
 GfxExecStack g_exec_stack = {};
 
-void gfx_run(Gfx* commands, const std::unordered_map<Mtx*, MtxF>& mtx_replacements) {
+void gfx_run(Gfx* commands, const robin_hood::unordered_map<Mtx*, MtxF>& mtx_replacements) {
     Ship::Context::GetInstance()->GetWindow()->GetGui()->SetupRendererFrame();
 
     gfx_sp_reset();

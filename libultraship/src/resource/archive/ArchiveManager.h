@@ -34,6 +34,7 @@ class ArchiveManager {
     std::shared_ptr<std::vector<std::string>> ListFiles(const std::string& filter = "");
     std::vector<uint32_t> GetGameVersions();
     const std::string* HashToString(uint64_t hash) const;
+    const char* HashToCString(uint64_t hash) const;
     bool IsGameVersionValid(uint32_t gameVersion);
 
   protected:
