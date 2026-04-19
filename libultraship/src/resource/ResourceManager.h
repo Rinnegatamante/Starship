@@ -10,10 +10,6 @@
 #include "resource/ResourceLoader.h"
 #include "resource/archive/ArchiveManager.h"
 
-#define BS_THREAD_POOL_ENABLE_PRIORITY
-#define BS_THREAD_POOL_ENABLE_PAUSE
-#include <BS_thread_pool.hpp>
-
 namespace Ship {
 struct File;
 
@@ -34,28 +30,17 @@ class ResourceManager {
     std::shared_ptr<ResourceLoader> GetResourceLoader();
     std::shared_ptr<IResource> GetCachedResource(const std::string& filePath, bool loadExact = false);
     std::shared_ptr<IResource> GetCachedResource(uint64_t hash, bool loadExact = false);
-    std::shared_ptr<IResource> LoadResource(const std::string& filePath, bool loadExact = false, BS::priority_t priority = BS::pr::normal,
+    std::shared_ptr<IResource> LoadResource(const std::string& filePath, bool loadExact = false,
                                             std::shared_ptr<ResourceInitData> initData = nullptr);
     std::shared_ptr<IResource> LoadResourceProcess(const std::string& filePath, bool loadExact = false,
                                                    std::shared_ptr<ResourceInitData> initData = nullptr);
     size_t UnloadResource(const std::string& filePath);
-#ifdef __vita__
     std::shared_ptr<IResource>
     LoadResourceAsync(const std::string& filePath, bool loadExact = false,
                       std::shared_ptr<ResourceInitData> initData = nullptr);
-#else
-    std::shared_future<std::shared_ptr<IResource>>
-    LoadResourceAsync(const std::string& filePath, bool loadExact = false,
-                      std::shared_ptr<ResourceInitData> initData = nullptr);
-#endif
     std::shared_ptr<std::vector<std::shared_ptr<IResource>>> LoadDirectory(const std::string& searchMask);
-#ifdef __vita__
     std::shared_ptr<std::vector<std::shared_ptr<IResource>>>
 	LoadDirectoryAsync(const std::string& searchMask);
-#else
-	std::shared_ptr<std::vector<std::shared_future<std::shared_ptr<IResource>>>>
-    LoadDirectoryAsync(const std::string& searchMask, BS::priority_t priority = BS::pr::normal);
-#endif
     void DirtyDirectory(const std::string& searchMask);
     void UnloadDirectory(const std::string& searchMask);
     bool OtrSignatureCheck(const char* fileName);
@@ -74,8 +59,6 @@ class ResourceManager {
     std::unordered_map<uint64_t, std::variant<ResourceLoadError, std::shared_ptr<IResource>>> mResourceCache;
     std::shared_ptr<ResourceLoader> mResourceLoader;
     std::shared_ptr<ArchiveManager> mArchiveManager;
-    std::shared_ptr<BS::thread_pool> mThreadPool;
-    std::mutex mMutex;
     bool mAltAssetsEnabled = false;
 };
 } // namespace Ship

@@ -25,7 +25,7 @@ void GameOverlay::LoadFont(const std::string& name, float fontSize, const std::s
     initData->ResourceVersion = 0;
     initData->Path = path;
     std::shared_ptr<Font> font = std::static_pointer_cast<Font>(
-        Context::GetInstance()->GetResourceManager()->LoadResource(path, owner, false, initData));
+        Context::GetInstance()->GetResourceManager()->LoadResource(path, false, initData));
 
     if (font == nullptr) {
         SPDLOG_ERROR("Failed to load font: {}", name);
