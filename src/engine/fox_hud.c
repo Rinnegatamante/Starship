@@ -4988,6 +4988,8 @@ f32 D_800D22CC = 260.0f;
 s32 D_800D22D0 = 50;
 s32 D_800D22D4 = 2;
 
+#include <vitasdk.h>
+
 void Aquas_CsLevelStart(Player* player) {
     Vec3f D_800D22D8[] = { { -1730.0f, 1600.0f, -6690.0f },
                            { -830.0f, 1600.0f, -7380.0f },
@@ -5020,6 +5022,7 @@ void Aquas_CsLevelStart(Player* player) {
     switch (player->csState) {
 
         case 0:
+			sceClibPrintf("intro\n");
             Aquas_CsIntroGreatFox_Init();
             gCsFrameCount = 0;
             gDrawBackdrop = 1;
@@ -5193,7 +5196,7 @@ void Aquas_CsLevelStart(Player* player) {
             player->pos.y = 1200.0f;
 
             gFillScreenAlphaTarget = 0;
-
+			
             Aquas_801BDF14();
 
             AUDIO_PLAY_BGM(NA_BGM_START_DEMO_M);
@@ -5265,16 +5268,20 @@ void Aquas_CsLevelStart(Player* player) {
                 player->pos.z = dest.z;
 
                 if (((player->csTimer % 8) == 0) && (player->csTimer > 740)) {
-                    Effect_Effect367_Spawn(player->cam.eye.x, 1600.0f, player->cam.eye.z, 10.0f, 100.0f, 0);
+                    //Effect_Effect367_Spawn(player->cam.eye.x, 1600.0f, player->cam.eye.z, 10.0f, 100.0f, 0);
                 }
 
+				static int draw_next = 1;
                 if ((player->unk_018 > -200.0f) && (D_ctx_80177A10[8] < 6)) {
-                    if (D_ctx_80177A10[8] < 2) {
-                        Aquas_Effect363_Spawn(player->pos.x, player->pos.y - 400.0f, player->pos.z, 20.0f);
-                    }
-                    if (D_ctx_80177A10[8] >= 2) {
-                        Aquas_Effect363_Spawn(player->pos.x, player->pos.y, player->pos.z, 10.0f);
-                    }
+					if (draw_next) {
+						if (D_ctx_80177A10[8] < 2) {
+							Aquas_Effect363_Spawn(player->pos.x, player->pos.y - 400.0f, player->pos.z, 20.0f);
+						}
+						if (D_ctx_80177A10[8] >= 2) {
+							Aquas_Effect363_Spawn(player->pos.x, player->pos.y, player->pos.z, 10.0f);
+						}
+					}
+					draw_next = !draw_next;
                     D_ctx_80177A10[8]++;
                 }
 
@@ -5328,13 +5335,14 @@ void Aquas_CsLevelStart(Player* player) {
 
             gAqDrawMode = 0;
             gFillScreenAlphaTarget = 0;
-
+			
             Object_Kill(&actor->obj, actor->sfxSource);
 
             player->cam.eye.z = gCsCamEyeZ = 800.0f;
             player->cam.at.z = gCsCamAtZ = 0.0f;
 
         case 6:
+		{
             player->xRock = SIN_DEG(player->rockPhase * 0.7f) * 0.5f;
             player->bobPhase += 10.0f;
             player->rockPhase += 8.0f;
@@ -5354,10 +5362,14 @@ void Aquas_CsLevelStart(Player* player) {
             D_ctx_80177A48[0] = 0.03f;
             gCsCamEyeZ = 240.0f;
             gCsCamAtZ = player->pos.z + (gPathProgress - 1.0f);
-
-            if (((player->csTimer % 2) == 0) && (player->csTimer > 962)) {
-                Aquas_Effect363_Spawn(player->pos.x, player->pos.y, player->pos.z + 50.0f, 20.0f);
-            }
+			
+			static int skip_next = 1;
+			
+			if (!skip_next) {
+				if (((player->csTimer % 2) == 0) && (player->csTimer > 962)) {
+					Aquas_Effect363_Spawn(player->pos.x, player->pos.y, player->pos.z + 50.0f, 20.0f);
+				}
+			}
 
             if (player->csTimer <= 900) {
                 gLevelStartStatusScreenTimer = 50;
@@ -5371,12 +5383,15 @@ void Aquas_CsLevelStart(Player* player) {
                 SEQCMD_STOP_SEQUENCE(SEQ_PLAYER_FANFARE, 50);
                 AUDIO_PLAY_BGM(NA_BGM_STAGE_AQ);
             }
-
-            Aquas_Effect366_Spawn(player->pos.x + RAND_FLOAT_CENTERED(10.0f),
+			
+			if (!skip_next) {
+				Aquas_Effect366_Spawn(player->pos.x + RAND_FLOAT_CENTERED(10.0f),
                                   player->pos.y + RAND_FLOAT_CENTERED(10.0f),
                                   player->pos.z - 65.0f + RAND_FLOAT_CENTERED(10.0f), 0.4f, 1);
+			}
+			skip_next = (skip_next + 1) % 3;
             break;
-
+		}
         default:
             break;
     }
