@@ -38,6 +38,10 @@
 #include <SDL_syswm.h>
 #endif
 
+#ifdef __vita__
+#include <vitasdk.h>
+#endif
+
 #define GFX_BACKEND_NAME "SDL"
 #define _100NANOSECONDS_IN_SECOND 10000000
 
@@ -601,6 +605,30 @@ void GfxWindowBackendSDL2::HandleSingleEvent(SDL_Event& event) {
 }
 
 void GfxWindowBackendSDL2::HandleEvents() {
+#ifdef __vita__
+	static uint32_t last_tick = 0;
+    static uint32_t oldpad;
+    SceCtrlData pad;
+    sceCtrlPeekBufferPositive(0, &pad, 1);
+    #define IS_PRESSED(x) ((pad.buttons & x) && !(oldpad & x))
+    #define IS_RELEASED(x) (oldpad & x)
+    #define fake_press(a, b, c) \
+        { SDL_Event sdlevent = {0}; \
+        sdlevent.type = a; \
+        sdlevent.key.keysym.scancode = b; \
+        sdlevent.key.keysym.sym = c; \
+        SDL_PushEvent(&sdlevent); }
+    if (IS_PRESSED(SCE_CTRL_SELECT)) {
+		uint32_t tick = sceKernelGetProcessTimeLow();
+		if (tick - 1000000 > last_tick) { // Limit to 1 time per second since raising ImGui screen causes a 20MBs usage spike
+			fake_press(SDL_KEYDOWN, SDL_SCANCODE_F1, SDLK_F1);
+			last_tick = tick;
+		}
+    } else if (IS_RELEASED(SCE_CTRL_SELECT)) {
+        fake_press(SDL_KEYUP, SDL_SCANCODE_F1, SDLK_F1);
+    }
+    oldpad = pad.buttons;
+#endif
     SDL_Event event;
     SDL_PumpEvents();
     while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_CONTROLLERDEVICEADDED - 1) > 0) {

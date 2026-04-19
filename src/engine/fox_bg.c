@@ -298,7 +298,7 @@ void Background_DrawStarfield(void) {
             // Check if the star is within the visible screen area with margin
             if (vx >= (marginX - STAR_MARGIN) && vx <= (marginX + renderMaskWidth + STAR_MARGIN) &&
                 vy >= (renderMaskHeight - STAR_MARGIN) && vy <= ((renderMaskHeight * 2) + STAR_MARGIN)) {
-
+#ifndef __vita__
                 bool skipInterpolation = (fabsf(vx - gStarPrevX[i]) > (marginX + renderMaskWidth) / 2.0f) ||
                                          (fabsf(vy - gStarPrevY[i]) > ((renderMaskHeight * 2)) / 2.0f);
 
@@ -309,7 +309,7 @@ void Background_DrawStarfield(void) {
                     FrameInterpolation_RecordOpenChild("Starfield", i);
                     FrameInterpolation_RecordMarker(__FILE__, __LINE__);
                 }
-
+#endif
                 // Translate to (vx, vy) in ortho coordinates
                 Matrix_Push(&gGfxMatrix);
                 Matrix_Translate(gGfxMatrix, vx - (currentScreenWidth / 2.0f), -(vy - (currentScreenHeight / 2.0f)),
@@ -330,14 +330,14 @@ void Background_DrawStarfield(void) {
                 // Draw the star using the predefined display list
                 gSPDisplayList(gMasterDisp++, starDL);
                 Matrix_Pop(&gGfxMatrix);
-
+#ifndef __vita__
                 if (skipInterpolation) {
                     // @port Re-enable Interpolation if it was skipped
                     FrameInterpolation_ShouldInterpolateFrame(true);
                 } else {
                     FrameInterpolation_RecordCloseChild();
                 }
-
+#endif
                 gStarPrevX[i] = vx;
                 gStarPrevY[i] = vy;
             }
