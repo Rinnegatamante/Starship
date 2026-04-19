@@ -4988,8 +4988,6 @@ f32 D_800D22CC = 260.0f;
 s32 D_800D22D0 = 50;
 s32 D_800D22D4 = 2;
 
-#include <vitasdk.h>
-
 void Aquas_CsLevelStart(Player* player) {
     Vec3f D_800D22D8[] = { { -1730.0f, 1600.0f, -6690.0f },
                            { -830.0f, 1600.0f, -7380.0f },
@@ -5022,7 +5020,6 @@ void Aquas_CsLevelStart(Player* player) {
     switch (player->csState) {
 
         case 0:
-			sceClibPrintf("intro\n");
             Aquas_CsIntroGreatFox_Init();
             gCsFrameCount = 0;
             gDrawBackdrop = 1;
