@@ -2,7 +2,7 @@
 #define GFX_RENDERING_API_H
 
 #include <stdint.h>
-
+#include <imgui.h>
 #include <unordered_map>
 #include <set>
 #include "imconfig.h"

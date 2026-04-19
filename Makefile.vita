@@ -25,12 +25,13 @@ LUS_SOURCES := libultraship/src libultraship/src/audio libultraship/src/config l
 	libultraship/src/controller/controldevice/controller libultraship/src/controller/controldevice/controller/mapping \
 	libultraship/src/controller/controldevice/controller/mapping/sdl libultraship/src/controller/controldevice/controller/mapping/factories \
 	libultraship/src/controller/controldevice/controller/mapping/keyboard libultraship/src/controller/controldevice/controller/mapping/mouse \
-	libultraship/src/controller/deviceindex libultraship/src/controller/controldeck libultraship/src/resource/archive
+	libultraship/src/controller/deviceindex libultraship/src/controller/controldeck libultraship/src/resource/archive \
+	libultraship/src/controller/physicaldevice libultraship/src/graphic/Fast3D/backends
 
 SOURCES	:= $(foreach dir,$(SOURCE_FOLDERS), $(wildcard $(dir)/*)) $(LUS_SOURCES) $(TORCH_SOURCES) \
 	src/audio src src/engine src/port src/port/extractor src/port/hooks/impl src/port/interpolation \
 	src/port/mods src/port/notification src/port/patches src/port/resource/importers src/port/resource/importers/audio \
-	src/port/resource/loaders src/port/resource/type src/port/resource/type/audio src/port/ui
+	src/port/resource/loaders src/port/resource/type src/port/resource/type/audio src/port/ui src/sys
 	
 INCLUDES := $(LUS_INCLUDES) $(TORCH_INCLUDES) \
 	include vita src . spdlog/include
@@ -45,6 +46,10 @@ LIBS = -lstorm -lgfxd -lbzip2 -lzip -lzstd -lz -lyaml-cpp -llzma -lssl -lcrypto 
 FINAL_SOURCES := f
 
 CFILES   := $(foreach dir,$(SOURCES), $(wildcard $(dir)/*.c))
+CFILES := $(filter-out src/engine/fox_colheaders.c src/engine/fox_edata_info.c src/engine/fox_rcp_setup.c \
+	src/engine/fox_load_inits.c src/overlays/ovl_ending/fox_end2_data.c src/sys/sys_timer.c \
+	src/sys/sys_fault.c src/mods/object_ram.c, $(CFILES))
+
 CPPFILES   := $(foreach dir,$(SOURCES), $(wildcard $(dir)/*.cpp))
 OBJS     := $(CFILES:.c=.o) $(CPPFILES:.cpp=.o) \
 	libultraship/imgui/backends/imgui_impl_opengl3.o \
@@ -53,15 +58,10 @@ OBJS     := $(CFILES:.c=.o) $(CPPFILES:.cpp=.o) \
 	src/libultra/gu/sqrtf.o \
 	src/libultra/gu/mtxutil.o \
 	src/libultra/gu/ortho.o \
-	src/sys/sys_save.o \
-	src/sys/sys_memory.o \
-	src/sys/sys_matrix.o \
-	src/sys/sys_math.o \
-	src/sys/sys_main.o \
-	src/sys/sys_lights.o \
-	src/sys/sys_lib.o \
-	src/sys/sys_joybus.o \
-	src/mods/object_ram.o
+	src/buffers.o \
+	src/dmatable.o \
+	src/libc_math64.o \
+	src/libc_sprintf.o
 	
 OBJS_PREPARE := $(CFILES:.c=.ok) $(CPPFILES:.cpp=.ok) \
 	libultraship/imgui/backends/imgui_impl_opengl3.ok \
@@ -70,15 +70,10 @@ OBJS_PREPARE := $(CFILES:.c=.ok) $(CPPFILES:.cpp=.ok) \
 	src/libultra/gu/sqrtf.ok \
 	src/libultra/gu/mtxutil.ok \
 	src/libultra/gu/ortho.ok \
-	src/sys/sys_save.ok \
-	src/sys/sys_memory.ok \
-	src/sys/sys_matrix.ok \
-	src/sys/sys_math.ok \
-	src/sys/sys_main.ok \
-	src/sys/sys_lights.ok \
-	src/sys/sys_lib.ok \
-	src/sys/sys_joybus.ok \
-	src/mods/object_ram.ok
+	src/buffers.ok \
+	src/dmatable.ok \
+	src/libc_math64.ok \
+	src/libc_sprintf.ok
 	
 OBJS_CLEAN := $(CFILES:.c=.oc) $(CPPFILES:.cpp=.oc) \
 	libultraship/imgui/backends/imgui_impl_opengl3.oc \
@@ -87,15 +82,10 @@ OBJS_CLEAN := $(CFILES:.c=.oc) $(CPPFILES:.cpp=.oc) \
 	src/libultra/gu/sqrtf.oc \
 	src/libultra/gu/mtxutil.oc \
 	src/libultra/gu/ortho.oc \
-	src/sys/sys_save.oc \
-	src/sys/sys_memory.oc \
-	src/sys/sys_matrix.oc \
-	src/sys/sys_math.oc \
-	src/sys/sys_main.oc \
-	src/sys/sys_lights.oc \
-	src/sys/sys_lib.oc \
-	src/sys/sys_joybus.oc \
-	src/mods/object_ram.oc
+	src/buffers.oc \
+	src/dmatable.oc \
+	src/libc_math64.oc \
+	src/libc_sprintf.oc
 	
 FINAL_OBJS := $(foreach dir,$(FINAL_SOURCES), $(wildcard $(dir)/*.o))
 
@@ -117,12 +107,12 @@ CVAR_PREFIX_REMOTE := gRemote
 PREFIX  = arm-vita-eabi
 CC      = $(PREFIX)-gcc
 CXX      = $(PREFIX)-g++
-CFLAGS  = -fno-lto -g -Wl,-q -O3 -ffast-math -fno-short-enums -fsigned-char \
+CFLAGS  = -fno-lto -g -Wl,-q,--allow-multiple-definition -O3 -ffast-math -fno-short-enums -fsigned-char \
 		$(foreach dir,$(INCLUDES),-I$(dir)) \
 		-Wno-narrowing -DIMGUI_IMPL_OPENGL_ES2 -DSPDLOG_ACTIVE_LEVEL=6 \
 		-I$(VITASDK)/$(PREFIX)/include/SDL2 -DENABLE_OPENGL -D$(GFX_UCODE) \
 		-D_LANGUAGE_C -D_USE_MATH_DEFINES -DCIMGUI_DEFINE_ENUMS_AND_STRUCTS \
-		-DNON_MATCHING=1 -DNON_EQUIVALENT=1 -DAVOID_UB=1 \
+		-DNON_MATCHING=1 -DNON_EQUIVALENT=1 -DAVOID_UB=1 -DGBI_FLOATS=1 \
 		-DVERSION_US=1 -DENABLE_RUMBLE=1 -DIMGUI_DEFINE_MATH_OPERATORS \
 		-DNAUDIO_SUPPORT -DSF64_SUPPORT \
 		-DCVAR_PREFIX_RANDOMIZER_ENHANCEMENT=\"$(CVAR_PREFIX_RANDOMIZER_ENHANCEMENT)\" \

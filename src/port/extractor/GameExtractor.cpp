@@ -5,7 +5,7 @@
 #include "Context.h"
 #include "spdlog/spdlog.h"
 #include <port/Engine.h>
-#if !defined(__IOS__) && !defined(__ANDROID__) && !defined(__SWITCH__)
+#if !defined(__IOS__) && !defined(__ANDROID__) && !defined(__SWITCH__) && !defined(__vita__)
 #include "portable-file-dialogs.h"
 #endif
 
@@ -23,7 +23,7 @@ std::unordered_map<std::string, std::string> mGameList = {
 };
 
 bool GameExtractor::SelectGameFromUI() {
-#if !defined(__IOS__) && !defined(__ANDROID__) && !defined(__SWITCH__)
+#if !defined(__IOS__) && !defined(__ANDROID__) && !defined(__SWITCH__) && !defined(__vita__)
     auto selection = pfd::open_file("Select a file", ".", { "N64 Roms", "*.z64" }).result();
 
     if (selection.empty()) {
