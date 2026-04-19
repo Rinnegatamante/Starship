@@ -320,10 +320,13 @@ void GameEngine::Destroy() {
 #endif
 }
 
+uint32_t interp_fps = 30;
+
 void GameEngine::StartFrame() const {
     using Ship::KbScancode;
     const int32_t dwScancode = this->context->GetWindow()->GetLastScancode();
     this->context->GetWindow()->SetLastScancode(-1);
+    interp_fps = CVarGetInteger(CVAR_SETTING("InterpolationFPS"), 30);
 
     switch (dwScancode) {
         case KbScancode::LUS_KB_TAB: {
@@ -538,16 +541,7 @@ void GameEngine::ProcessGfxCommands(Gfx* commands) {
 }
 
 uint32_t GameEngine::GetInterpolationFPS() {
-    if (CVarGetInteger("gMatchRefreshRate", 0)) {
-        return Ship::Context::GetInstance()->GetWindow()->GetCurrentRefreshRate();
-
-    } else if (CVarGetInteger("gVsyncEnabled", 1) ||
-               !Ship::Context::GetInstance()->GetWindow()->CanDisableVerticalSync()) {
-        return std::min<uint32_t>(Ship::Context::GetInstance()->GetWindow()->GetCurrentRefreshRate(),
-                                  CVarGetInteger("gInterpolationFPS", 60));
-    }
-
-    return CVarGetInteger("gInterpolationFPS", 60);
+    return interp_fps;
 }
 
 uint32_t GameEngine::GetInterpolationFrameCount()
