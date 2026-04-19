@@ -430,7 +430,7 @@ void FrameInterpolation_StartRecord(void) {
         is_recording = false;
         return;
     }
-    if (GameEngine::GetInterpolationFPS() != 20) {
+    if (GameEngine::GetInterpolationFPS() != 30) {
         is_recording = true;
     }
 }
