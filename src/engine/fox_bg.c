@@ -252,9 +252,13 @@ void Background_DrawStarfield(void) {
         zCos = __cosf(gStarfieldRoll);
         zSin = __sinf(gStarfieldRoll);
 
+#ifdef __vita__
+		FrameInterpolation_ShouldInterpolateFrame(false);
+#else
         if (CVarGetInteger("gDisableStarsInterpolation", 0) == 1) {
             FrameInterpolation_ShouldInterpolateFrame(false);
         }
+#endif
 
         float originalWidth = currentScreenWidth / 3;
         float originalAspect = originalWidth / (currentScreenHeight / 3);
@@ -338,10 +342,13 @@ void Background_DrawStarfield(void) {
                 gStarPrevY[i] = vy;
             }
         }
-
+#ifdef __vita__
+		FrameInterpolation_ShouldInterpolateFrame(true);
+#else
         if (CVarGetInteger("gDisableStarsInterpolation", 0) == 1) {
             FrameInterpolation_ShouldInterpolateFrame(true);
         }
+#endif
     }
 
     // Restore original perspective after drawing stars
