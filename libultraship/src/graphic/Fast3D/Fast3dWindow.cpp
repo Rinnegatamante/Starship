@@ -76,9 +76,18 @@ void Fast3dWindow::Init() {
     int32_t posX, posY;
 
     isFullscreen = Ship::Context::GetInstance()->GetConfig()->GetBool("Window.Fullscreen.Enabled", false) || gameMode;
+#ifdef __vita__
+    posX = Ship::Context::GetInstance()->GetConfig()->GetInt("Window.PositionX", 0);
+    posY = Ship::Context::GetInstance()->GetConfig()->GetInt("Window.PositionY", 0);
+#else
     posX = Ship::Context::GetInstance()->GetConfig()->GetInt("Window.PositionX", 100);
     posY = Ship::Context::GetInstance()->GetConfig()->GetInt("Window.PositionY", 100);
+#endif
 
+#ifdef __vita__
+    width = Ship::Context::GetInstance()->GetConfig()->GetInt("Window.Fullscreen.Width", 960);
+    height = Ship::Context::GetInstance()->GetConfig()->GetInt("Window.Fullscreen.Height", 545);
+#else
     if (isFullscreen) {
         width = Ship::Context::GetInstance()->GetConfig()->GetInt("Window.Fullscreen.Width", gameMode ? 1280 : 1920);
         height = Ship::Context::GetInstance()->GetConfig()->GetInt("Window.Fullscreen.Height", gameMode ? 800 : 1080);
@@ -86,6 +95,7 @@ void Fast3dWindow::Init() {
         width = Ship::Context::GetInstance()->GetConfig()->GetInt("Window.Width", 640);
         height = Ship::Context::GetInstance()->GetConfig()->GetInt("Window.Height", 480);
     }
+#endif
 
     SetForceCursorVisibility(CVarGetInteger("gForceCursorVisibility", 0));
 
