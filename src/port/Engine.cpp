@@ -1,3 +1,7 @@
+#ifdef __vita__
+#include "stacking_thread.h"
+#endif
+
 #include "Engine.h"
 #include "ui/ImguiUI.h"
 #include "StringHelper.h"
@@ -326,7 +330,7 @@ void GameEngine::StartFrame() const {
     using Ship::KbScancode;
     const int32_t dwScancode = this->context->GetWindow()->GetLastScancode();
     this->context->GetWindow()->SetLastScancode(-1);
-    interp_fps = CVarGetInteger(CVAR_SETTING("InterpolationFPS"), 30);
+    interp_fps = CVarGetInteger("gInterpolationFPS", 60);
 
     switch (dwScancode) {
         case KbScancode::LUS_KB_TAB: {
@@ -440,7 +444,11 @@ void GameEngine::EndAudioFrame() {
 void GameEngine::AudioInit() {
     if (!audio.running) {
         audio.running = true;
+#ifdef __vita__
+        audio.thread = std::stacking_thread(2 * 1024 * 1024, HandleAudioThread);
+#else
         audio.thread = std::thread(HandleAudioThread);
+#endif
     }
 }
 
