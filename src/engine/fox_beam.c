@@ -71,10 +71,12 @@ void PlayerShot_ExplodeBomb(PlayerShot* shot) {
                 Effect_Effect372_Spawn2(shot->obj.pos.x, gGroundHeight, shot->obj.pos.z, shot->unk_48 * 0.05f,
                                         shot->unk_48 * 0.5f);
                 Effect_SpawnTimedSfxAtPos(&shot->obj.pos, NA_SE_OB_WATER_BOUND_M);
-            } else {
+            } else if (gCurrentLevel != LEVEL_TITANIA) {
                 func_enmy_80062B60(shot->obj.pos.x, shot->obj.pos.z, 0, shot->unk_48 * 3.0f);
             }
         }
+		if (gCurrentLevel == LEVEL_TITANIA)
+			return;
         if (gCurrentLevel == LEVEL_BOLSE) {
             var_fv0 = 180.0f - (shot->obj.pos.y / 20.0f);
             if (var_fv0 < 50.0f) {
