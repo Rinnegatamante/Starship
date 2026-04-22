@@ -157,9 +157,7 @@ static Gfx starSetupDL[] = {
     gsSPEndDisplayList(),
 };
 
-// New global variables for storing the previoous positions
-f32 gStarPrevX[3000];
-f32 gStarPrevY[3000];
+extern uint32_t interp_fps;
 
 // @port: Starfield drawn with triangles, re-engineered by @Tharo & @TheBoy181
 void Background_DrawStarfield(void) {
@@ -297,8 +295,6 @@ void Background_DrawStarfield(void) {
 #ifndef __vita__
                 FrameInterpolation_RecordCloseChild();
 #endif
-                gStarPrevX[i] = vx;
-                gStarPrevY[i] = vy;
             }
         }
 #ifndef __vita__
@@ -306,7 +302,8 @@ void Background_DrawStarfield(void) {
             FrameInterpolation_ShouldInterpolateFrame(true);
         }
 #else
-		FrameInterpolation_ShouldInterpolateFrame(true);
+		if (interp_fps > 30)
+			FrameInterpolation_ShouldInterpolateFrame(true);
 #endif
     }
 

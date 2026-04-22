@@ -628,8 +628,6 @@ void Play_GenerateStarfield(void) {
     }
 }
 */
-extern f32 gStarPrevX[3000];
-extern f32 gStarPrevY[3000];
 
 void Play_GenerateStarfield(void) {
     u32 i;
@@ -648,8 +646,6 @@ void Play_GenerateStarfield(void) {
         gStarOffsetsX[i] = RAND_FLOAT_SEEDED(starfieldWidth);
         gStarOffsetsY[i] = RAND_FLOAT_SEEDED(starfieldHeight);
         gStarFillColors[i] = FILL_COLOR(gStarColors[i % ARRAY_COUNT(gStarColors)]);
-        gStarPrevX[i] = 0.0f;
-        gStarPrevY[i] = 0.0f;
     }
 }
 
