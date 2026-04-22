@@ -41,6 +41,7 @@ void OvlI4_CallFunction(u32 mode, void* ptr) {
             break;
         case OVLCALL_BO_LASER_CANNON_DRAW:
             Bolse_BoLaserCannon_Draw(ptr);
+			break;
         default:
             PRINTF("i4 指定外！\n"); // Not specified!
             break;
