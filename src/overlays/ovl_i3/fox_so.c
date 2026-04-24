@@ -921,8 +921,10 @@ void Solar_Effect392_Draw(Effect392* this) {
             break;
         case 1:
         case 2:
+#ifndef __vita__
             gDPSetPrimColor(gMasterDisp++, 0x00, 0x00, 255, 128, 128, this->unk_44);
             gSPDisplayList(gMasterDisp++, D_i3_801BF944[this->unk_4C]);
+#endif
             break;
         case 3:
             gDPSetPrimColor(gMasterDisp++, 0x00, 0x00, 255, 128, 128, this->unk_44);
