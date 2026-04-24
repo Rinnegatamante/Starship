@@ -10,7 +10,7 @@ This is a port of Starship (v.1.0.0 for now but planned to be moved up to latest
 
 ## Credits
 - TheIronUniverse for the Livearea assets.
-- hatoving for testing the homebrew.
+- withLogic and hatoving for testing the homebrew.
 
 ## vitaGL flags
 
