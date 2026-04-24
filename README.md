@@ -5,8 +5,9 @@ This is a port of Starship (v.1.0.0 for now but planned to be moved up to latest
 ## Setup Instructions
 - Download [Starship v.1.0.0](https://github.com/HarbourMasters/Starship/releases/tag/v1.0.0) for PC.
 - Follow its instructions to generate `sf64.otr`.
+- Extract `starship.zip` from the Release section in `ux0:data`.
 - Place `sf64.otr` and `starship.otr` in `ux0:data/starship`.
-- Install the vpk.
+- Install the vpk from the Release section.
 
 ## Credits
 - TheIronUniverse for the Livearea assets.
