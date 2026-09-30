@@ -32,7 +32,9 @@ src/assets/*
 build-new/
 tools/mio0
 tools/ido-recomp
-debug/
+/debug/
+!libultraship/src/debug/
+!libultraship/src/graphic/Fast3D/debug/
 .venv/
 m2cfiles/
 TempComp.bin.mio0

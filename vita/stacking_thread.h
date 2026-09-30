@@ -60,12 +60,6 @@
 #   undef _M_start_thread
     namespace std {
     _GLIBCXX_BEGIN_NAMESPACE_VERSION
-    static void* _M_execute_native_thread_routine(void* __p)
-    {
-        thread::_State_ptr __t{ static_cast<thread::_State*>(__p) };
-        __t->_M_run();
-        return nullptr;
-    }
     static inline size_t _M_thread_setstacksize(size_t __s = 0)
     {
         if (__s < PTHREAD_STACK_MIN && __s)
@@ -80,10 +74,17 @@
     {
         size_t __s = _M_thread_setstacksize();
 
+        // The state types are private in newer libstdc++; retain member access.
+        auto execute_native_thread = [](void* __p) -> void* {
+            _State_ptr __t{ static_cast<_State*>(__p) };
+            __t->_M_run();
+            return nullptr;
+        };
+
         pthread_attr_t __a;
         ::pthread_attr_init(&__a);
         if (__s) ::pthread_attr_setstacksize(&__a, __s);
-        const int err = pthread_create(&_M_id._M_thread, &__a, &_M_execute_native_thread_routine, state.get());
+        const int err = pthread_create(&_M_id._M_thread, &__a, execute_native_thread, state.get());
         ::pthread_attr_destroy(&__a);
         if (err)
             __throw_system_error(err);
